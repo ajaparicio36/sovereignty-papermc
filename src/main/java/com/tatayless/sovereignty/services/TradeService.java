@@ -36,11 +36,8 @@ public class TradeService {
 
     public void loadTrades() {
         CompletableFuture.runAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Load trades
                 Result<Record> results = context.select().from("trades").fetch();
 
@@ -122,14 +119,6 @@ public class TradeService {
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load trades: " + e.getMessage());
                 e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -183,11 +172,8 @@ public class TradeService {
         trade.setStatus(TradeStatus.PENDING);
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Insert trade record
                 context.insertInto(
                         DSL.table("trades"),
@@ -243,14 +229,6 @@ public class TradeService {
                 plugin.getLogger().severe("Failed to propose trade: " + e.getMessage());
                 e.printStackTrace();
                 return null;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -267,11 +245,8 @@ public class TradeService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Update trade status
                 context.update(DSL.table("trades"))
                         .set(DSL.field("status"), "active")
@@ -302,14 +277,6 @@ public class TradeService {
                 plugin.getLogger().severe("Failed to accept trade: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -330,11 +297,8 @@ public class TradeService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Update trade status
                 context.update(DSL.table("trades"))
                         .set(DSL.field("status"), "cancelled")
@@ -382,14 +346,6 @@ public class TradeService {
                 plugin.getLogger().severe("Failed to cancel trade: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -403,11 +359,8 @@ public class TradeService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 Nation sendingNation = nationService.getNation(trade.getSendingNationId());
                 Nation receivingNation = nationService.getNation(trade.getReceivingNationId());
 
@@ -523,14 +476,6 @@ public class TradeService {
                 plugin.getLogger().severe("Failed to execute trade: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -600,11 +545,8 @@ public class TradeService {
 
     private CompletableFuture<Boolean> updateTradeVault(TradeVault vault) {
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Serialize items
                 String sendingItemsJson = null;
                 String receivingItemsJson = null;
@@ -632,14 +574,6 @@ public class TradeService {
                 plugin.getLogger().severe("Failed to update trade vault: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }

@@ -24,11 +24,8 @@ public class PlayerService {
 
     public void loadPlayers() {
         CompletableFuture.runAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 Result<Record> results = context.select().from("players").fetch();
 
                 for (Record record : results) {
@@ -52,14 +49,6 @@ public class PlayerService {
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load players: " + e.getMessage());
                 e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }

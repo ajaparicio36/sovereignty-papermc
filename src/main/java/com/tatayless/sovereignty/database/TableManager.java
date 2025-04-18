@@ -4,6 +4,7 @@ import com.tatayless.sovereignty.Sovereignty;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jooq.DSLContext;
 
+import java.sql.Connection;
 import java.util.concurrent.CompletableFuture;
 
 public class TableManager {
@@ -21,16 +22,22 @@ public class TableManager {
         new BukkitRunnable() {
             @Override
             public void run() {
-                try {
+                // Don't use the passed context which might have a closed connection
+                try (Connection connection = plugin.getDatabaseManager().getConnection()) {
+                    DSLContext newContext = org.jooq.impl.DSL.using(
+                            connection,
+                            plugin.getDatabaseManager().getSqlDialect());
+
                     if (isMySQL) {
-                        createMySQLTables(context);
+                        createMySQLTables(newContext);
                     } else {
-                        createSQLiteTables(context);
+                        createSQLiteTables(newContext);
                     }
                     plugin.getLogger().info("Database tables have been initialized");
                     future.complete(null);
                 } catch (Exception e) {
                     plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
+                    e.printStackTrace(); // Add stack trace for better debugging
                     future.completeExceptionally(e);
                 }
             }

@@ -86,16 +86,13 @@ public class DatabaseManager {
     }
 
     private void createTablesIfNotExist() throws SQLException {
-        Connection conn = null;
-        try {
-            conn = getConnection();
+        try (Connection conn = getConnection()) {
             DSLContext context = DSL.using(conn, sqlDialect);
-            tableManager.createTables(context);
-        } finally {
-            // Manually close the connection
-            if (conn != null && !conn.isClosed()) {
-                conn.close();
-            }
+            tableManager.createTables(context).join(); // Wait for table creation to complete
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error creating tables: " + e.getMessage());
+            e.printStackTrace();
+            throw new SQLException("Failed to create database tables", e);
         }
     }
 
@@ -105,6 +102,11 @@ public class DatabaseManager {
 
     public DSLContext createContext() throws SQLException {
         Connection conn = getConnection();
+        return DSL.using(conn, sqlDialect);
+    }
+
+    // Add a helper method to create DSLContext with try-with-resources pattern
+    public DSLContext createContextSafe(Connection conn) {
         return DSL.using(conn, sqlDialect);
     }
 

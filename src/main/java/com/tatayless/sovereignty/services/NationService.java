@@ -32,11 +32,8 @@ public class NationService {
 
     public void loadNations() {
         CompletableFuture.runAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 Result<Record> results = context.select().from("nations").fetch();
 
                 for (Record record : results) {
@@ -134,14 +131,6 @@ public class NationService {
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load nations: " + e.getMessage());
                 e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -174,11 +163,8 @@ public class NationService {
         finalSovereigntyPlayer.setRole(Nation.Role.PRESIDENT);
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Save nation - Fixed DSLContext usage
                 context.insertInto(
                         DSL.table("nations"))
@@ -198,14 +184,6 @@ public class NationService {
                 plugin.getLogger().severe("Failed to create nation: " + e.getMessage());
                 e.printStackTrace();
                 return null;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -222,11 +200,8 @@ public class NationService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Remove all players from nation
                 List<SovereigntyPlayer> nationPlayers = playerService.getPlayersByNation(nationId);
                 for (SovereigntyPlayer player : nationPlayers) {
@@ -255,14 +230,6 @@ public class NationService {
                 plugin.getLogger().severe("Failed to disband nation: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -399,11 +366,8 @@ public class NationService {
 
     public CompletableFuture<Boolean> saveNation(Nation nation) {
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Convert sets to JSON
                 String claimedChunksJson = gson.toJson(
                         nation.getClaimedChunks().stream()
@@ -441,14 +405,6 @@ public class NationService {
                 plugin.getLogger().severe("Failed to save nation: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }

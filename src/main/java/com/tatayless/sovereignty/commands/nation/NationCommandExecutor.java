@@ -35,6 +35,7 @@ public class NationCommandExecutor implements CommandExecutor, TabCompleter {
         registerSubCommand(new JoinCommand(plugin));
         registerSubCommand(new LeaveCommand(plugin));
         registerSubCommand(new AppointCommand(plugin));
+        registerSubCommand(new AllianceCommand(plugin)); // Register the alliance command
     }
 
     private void registerSubCommand(SubCommand command) {

@@ -30,11 +30,8 @@ public class WarService {
 
     public void loadWars() {
         CompletableFuture.runAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 Result<Record> results = context.select().from("wars")
                         .where(DSL.field("status").eq("active"))
                         .fetch();
@@ -67,14 +64,6 @@ public class WarService {
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load wars: " + e.getMessage());
                 e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -100,11 +89,8 @@ public class WarService {
         War war = new War(warId, attackerNationId, defenderNationId, requiredKills);
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Insert war record
                 context.insertInto(
                         DSL.table("wars"),
@@ -139,14 +125,6 @@ public class WarService {
                 plugin.getLogger().severe("Failed to declare war: " + e.getMessage());
                 e.printStackTrace();
                 return null;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -166,11 +144,8 @@ public class WarService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Update war record
                 context.update(DSL.table("wars"))
                         .set(DSL.field("status"), "ended")
@@ -212,14 +187,6 @@ public class WarService {
                 plugin.getLogger().severe("Failed to end war: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -238,11 +205,8 @@ public class WarService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Update war record
                 context.update(DSL.table("wars"))
                         .set(DSL.field("status"), "cancelled")
@@ -270,14 +234,6 @@ public class WarService {
                 plugin.getLogger().severe("Failed to cancel war: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -311,11 +267,8 @@ public class WarService {
         boolean isAssassination = plugin.getConfigManager().isAssassinationModeEnabled() && victim.isPresident();
 
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Update war record
                 context.update(DSL.table("wars"))
                         .set(
@@ -374,14 +327,6 @@ public class WarService {
                 plugin.getLogger().severe("Failed to record kill: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }

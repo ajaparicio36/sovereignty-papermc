@@ -145,6 +145,44 @@ public class AllianceService {
                 .thenApply(v -> future1.join() && future2.join());
     }
 
+    public CompletableFuture<Boolean> denyAlliance(String nationId, String senderNationId, String playerId) {
+        Nation nation = nationService.getNation(nationId);
+
+        if (nation == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+
+        // Check if player has permission (president or senator)
+        if (!nation.isOfficer(playerId)) {
+            return CompletableFuture.completedFuture(false);
+        }
+
+        // Check if the request exists
+        Set<String> requests = allianceRequests.getOrDefault(nationId, new HashSet<>());
+        if (!requests.contains(senderNationId)) {
+            return CompletableFuture.completedFuture(false);
+        }
+
+        // Remove the request
+        requests.remove(senderNationId);
+        if (requests.isEmpty()) {
+            allianceRequests.remove(nationId);
+        } else {
+            allianceRequests.put(nationId, requests);
+        }
+
+        // Notify sender nation
+        Nation senderNation = nationService.getNation(senderNationId);
+        if (senderNation != null) {
+            String message = plugin.getLocalizationManager().getMessage(
+                    "alliance.request-denied-notification",
+                    "nation", nation.getName());
+            notifyNationOfficers(senderNationId, message);
+        }
+
+        return CompletableFuture.completedFuture(true);
+    }
+
     public boolean isAllied(String nationId1, String nationId2) {
         Nation nation1 = nationService.getNation(nationId1);
         if (nation1 == null) {

@@ -39,11 +39,8 @@ public class VaultService {
 
     public void loadVaults() {
         CompletableFuture.runAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Load nation vaults
                 Result<Record> results = context.select().from("nation_vaults").fetch();
 
@@ -103,14 +100,6 @@ public class VaultService {
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load vaults: " + e.getMessage());
                 e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -173,11 +162,8 @@ public class VaultService {
 
         // Create new vault
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Check if vault exists in DB
                 Record record = context.select().from("nation_vaults")
                         .where(DSL.field("nation_id").eq(nationId))
@@ -240,14 +226,6 @@ public class VaultService {
                 plugin.getLogger().severe("Failed to create vault: " + e.getMessage());
                 e.printStackTrace();
                 return null;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
@@ -264,11 +242,8 @@ public class VaultService {
 
     public CompletableFuture<Boolean> saveVault(NationVault vault) {
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
+            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
                 // Serialize items
                 String itemsJson = null;
                 String overflowItemsJson = null;
@@ -296,14 +271,6 @@ public class VaultService {
                 plugin.getLogger().severe("Failed to save vault: " + e.getMessage());
                 e.printStackTrace();
                 return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
-                }
             }
         });
     }
