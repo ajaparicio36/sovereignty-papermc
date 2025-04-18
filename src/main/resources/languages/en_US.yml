@@ -1,21 +1,38 @@
-# English (US) language file for Sovereignty
+# Sovereignty English (US) Language File
 
 # General messages
 general:
+  prefix: "<dark_gray>[<gold>Sovereignty<dark_gray>]</dark_gray> "
   plugin-enabled: "<green>Sovereignty has been enabled!"
   plugin-disabled: "<red>Sovereignty has been disabled!"
-  no-permission: "<red>You don't have permission to use this command."
-  player-only: "<red>This command can only be used by players."
+  no-permission: "<red>You don't have permission to do that.</red>"
+  player-only: "<red>This command can only be used by players.</red>"
+  invalid-args: "<red>Invalid arguments. Usage: {usage}</red>"
   command-usage: "<red>Usage: {usage}"
   not-in-nation: "<red>You are not in a nation!"
   target-not-in-nation: "<red>{player} is not in a nation!"
 
-# Nation messages
+# Nation related messages
 nation:
-  created: "<green>Nation {name} has been created!"
-  disbanded: "<red>Nation {name} has been disbanded!"
-  joined: "<green>You have joined the nation {name}!"
-  left: "<red>You have left the nation {name}!"
+  created: "<green>Nation <gold>{name}</gold> has been created!</green>"
+  disbanded: "<green>Nation <gold>{name}</gold> has been disbanded!</green>"
+  already-exists: "<red>A nation with this name already exists.</red>"
+  already-in-nation: "<red>You are already in a nation.</red>"
+  not-in-nation: "<red>You are not in a nation.</red>"
+  not-president: "<red>You are not the president of this nation.</red>"
+  not-officer: "<red>You are not an officer (President or Senator) of this nation.</red>"
+  joined: "<green>You have joined the nation <gold>{name}</gold>!</green>"
+  left: "<green>You have left the nation <gold>{name}</gold>!</green>"
+  player-joined: "<green>{player} has joined your nation!</green>"
+  player-left: "<green>{player} has left your nation!</green>"
+  info: |
+    <gold>--- Nation: {name} ---</gold>
+    <white>Power: <yellow>{power}</yellow> (Level {powerLevel})</white>
+    <white>President: <yellow>{president}</yellow></white>
+    <white>Citizens: <yellow>{citizens}</yellow></white>
+    <white>Claimed Chunks: <yellow>{chunks}</yellow> / {maxChunks}</white>
+    <white>Annexed Chunks: <yellow>{annexedChunks}</yellow></white>
+    <white>Alliances: <yellow>{alliances}</yellow></white>
   not-enough-power: "<red>Your nation doesn't have enough power to do this!"
   power-gained: "<green>Your nation gained {amount} power!"
   power-lost: "<red>Your nation lost {amount} power!"
@@ -24,60 +41,79 @@ nation:
   # Roles
   role-assigned: "<green>{player} has been assigned the role of {role}!"
   role-removed: "<red>{player}'s role of {role} has been removed!"
-  not-president: "<red>Only the president can do this!"
-  not-senator: "<red>Only senators can do this!"
-  not-soldier: "<red>Only soldiers can do this!"
   president-title: "<gold>President"
   senator-title: "<yellow>Senator"
   soldier-title: "<gray>Soldier"
   citizen-title: "<white>Citizen"
 
-# Chunk messages
+# Chunk related messages
 chunk:
-  claimed: "<green>Chunk claimed for nation {name}!"
-  unclaimed: "<red>Chunk unclaimed!"
+  claimed: "<green>Chunk claimed for nation <gold>{nation}</gold>!</green>"
+  unclaimed: "<green>Chunk unclaimed from nation <gold>{nation}</gold>!</green>"
+  already-claimed: "<red>This chunk is already claimed by <gold>{nation}</gold>.</red>"
+  not-claimed: "<red>This chunk is not claimed by your nation.</red>"
+  max-reached: "<red>Your nation has reached its maximum chunk limit. Increase your power level to claim more.</red>"
+  info: "<green>This chunk belongs to <gold>{nation}</gold>.</green>"
+  not-claimed-any: "<green>This chunk is not claimed by any nation.</green>"
   cannot-claim: "<red>You cannot claim this chunk!"
   max-chunks-reached: "<red>Your nation has reached the maximum number of chunks for your power level!"
   entered: "<gray>You have entered the territory of {name}!"
   exited: "<gray>You have exited the territory of {name}!"
 
-# War messages
+# War related messages
 war:
-  declared: "<red>War has been declared on {nation}!"
-  received: "<red>{nation} has declared war on your nation!"
-  ended: "<green>The war between {attacker} and {defender} has ended!"
-  victory: "<green>Your nation has won the war against {nation}!"
-  defeat: "<red>Your nation has lost the war against {nation}!"
-  cancelled: "<yellow>The war between {attacker} and {defender} has been cancelled by an admin."
+  declared: "<red>Your nation has declared war on <gold>{nation}</gold>!</red>"
+  received: "<red>Your nation is under attack by <gold>{nation}</gold>!</red>"
+  ended: "<green>The war between <gold>{attacker}</gold> and <gold>{defender}</gold> has ended. <gold>{winner}</gold> is victorious!</green>"
+  player-killed: "<yellow>{player} from {nation} has been killed in war! ({current}/{required} kills)</yellow>"
+  president-killed: "<red>PRESIDENT ASSASSINATION! {nation}'s president has been killed!</red>"
+  already-at-war: "<red>You are already at war with this nation.</red>"
+  not-at-war: "<red>You are not at war with this nation.</red>"
+  victory: "<gold>Your nation has won the war against <gold>{nation}</gold>!</gold>"
+  defeat: "<red>Your nation has lost the war against <gold>{nation}</gold>!</red>"
+  cancelled: "<green>The war has been cancelled by an administrator.</green>"
   soldier-killed: "<gray>{player} has been killed in the war! ({current}/{max} lives left)"
   president-assassinated: "<red>The president of {nation} has been assassinated! The war is over!"
 
-# Alliance messages
+# Alliance related messages
 alliance:
+  formed: "<green>Your nation has formed an alliance with <gold>{nation}</gold>!</green>"
+  broken: "<red>Your alliance with <gold>{nation}</gold> has been broken.</red>"
+  already-allied: "<red>You are already allied with this nation.</red>"
+  not-allied: "<red>You are not allied with this nation.</red>"
+  request-sent: "<green>Alliance request sent to <gold>{nation}</gold>!</green>"
+  request-received: "<green>You've received an alliance request from <gold>{nation}</gold>!</green>"
   proposed: "<green>An alliance has been proposed to {nation}!"
   received: "<green>{nation} has proposed an alliance with your nation!"
   accepted: "<green>The alliance with {nation} has been accepted!"
   declined: "<red>The alliance with {nation} has been declined."
-  broken: "<red>The alliance with {nation} has been broken!"
 
-# Trade messages
+# Trade related messages
 trade:
-  proposed: "<green>A trade has been proposed to {nation}!"
-  received: "<green>{nation} has proposed a trade with your nation!"
-  accepted: "<green>The trade with {nation} has been accepted!"
-  declined: "<red>The trade with {nation} has been declined."
-  completed: "<green>The trade with {nation} has been completed!"
-  failed: "<red>The trade with {nation} has failed due to missing items!"
-  cancelled: "<red>The trade with {nation} has been cancelled due to war!"
+  proposed: "<green>Trade proposal sent to <gold>{nation}</gold>!</green>"
+  received: "<green>You've received a trade proposal from <gold>{nation}</gold>!</green>"
+  accepted: "<green>Trade agreement established with <gold>{nation}</gold>!</green>"
+  cancelled: "<red>Trade with <gold>{nation}</gold> has been cancelled.</red>"
+  completed: "<green>Trade with <gold>{nation}</gold> has been completed.</green>"
+  failed: "<red>Trade with <gold>{nation}</gold> has failed due to missing items.</red>"
   items-deposited: "<green>Items deposited in trade vault!"
   items-withdrawn: "<green>Items withdrawn from nation vault!"
   overflow-warning: "<yellow>Some items were placed in overflow storage and will expire in {time}!"
   items-expired: "<red>Some items in your nation vault have expired and been deleted!"
 
-# Vault messages
+# Protection messages
+protection:
+  cannot-break: "<red>You cannot break blocks in <gold>{nation}</gold>'s territory.</red>"
+  cannot-place: "<red>You cannot place blocks in <gold>{nation}</gold>'s territory.</red>"
+  cannot-interact: "<red>You cannot interact with blocks in <gold>{nation}</gold>'s territory.</red>"
+  cannot-damage-entity: "<red>You cannot damage entities in <gold>{nation}</gold>'s territory.</red>"
+
+# Vault related messages
 vault:
-  opened: "<green>Opening vault for nation {name}!"
-  npc-created: "<green>Vault NPC created at your location!"
-  trade-npc-created: "<green>Trade Vault NPC created at your location!"
+  opened: "<green>Opening nation vault...</green>"
+  no-vault: "<red>Your nation doesn't have a vault.</red>"
+  trade-opened: "<green>Opening trade vault for <gold>{nation}</gold>...</green>"
+  npc-created: "<green>Vault NPC created for your nation.</green>"
+  trade-npc-created: "<green>Trade Vault NPC created for trade with <gold>{nation}</gold>.</green>"
   npc-removed: "<red>Vault NPC removed!"
   npc-accessed: "<gray>Accessing vault for nation {name}!"

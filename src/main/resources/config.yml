@@ -1,11 +1,11 @@
 # Sovereignty Configuration
 
-# Database settings
+# Database Configuration
 database:
   # Database type: mysql or sqlite
   type: sqlite
 
-  # MySQL settings
+  # MySQL Configuration
   mysql:
     host: localhost
     port: 3306
@@ -14,16 +14,16 @@ database:
     password: password
     useSSL: false
 
-  # SQLite settings
+  # SQLite Configuration
   sqlite:
     filename: sovereignty.db
 
 # Language settings (available: en_US)
 language: en_US
 
-# Power scaling configuration
+# Power Scaling Configuration
 power-scaling:
-  # Maximum claimable chunks per power level
+  # Max chunks by power level
   chunks:
     level-1: 10
     level-2: 25
@@ -32,7 +32,7 @@ power-scaling:
     level-5: 120
     level-6: 180
 
-  # Maximum soldier lives per power level
+  # Max soldier lives by power level
   soldier-lives:
     level-1: 5
     level-2: 10
@@ -41,32 +41,24 @@ power-scaling:
     level-5: 50
     level-6: 75
 
-  # Growth rates
-  growth:
-    players: 0.1 # +0.1 per 5 players
-    alliance: 0.1 # +0.1 per alliance (max +1.5)
-    trade-success: 0.05 # +0.05 for every 3 consecutive fulfilled trades
-    trade-failure: -0.05 # -0.05 for every 3 failed trades in last 10
-    war-victory: 1.0 # +1 per war victory (once per week)
-
-# War settings
+# War Configuration
 war:
-  # If true, nations at war can destroy blocks inside opponent's land
+  # Allow destruction of blocks in enemy territory during war
   enable-destruction: false
 
-  # If true, killing the president instantly wins the war
+  # Enable assassination mode (killing president instantly wins war)
   enable-assassination: false
 
-  # Minimum time (in hours) between declaring wars
-  cooldown-hours: 24
+  # How often power should recalculate (in minutes)
+  power-recalculation-interval: 10
 
-# Vault settings
+# Vault Configuration
 vaults:
-  # Number of rows in nation vaults (1 row = 9 slots)
+  # Number of rows in nation vault (1 row = 9 slots)
   nation-vault-rows: 3
 
-  # Number of rows in trade vaults
+  # Number of rows in trade vault (1 row = 9 slots)
   trade-vault-rows: 3
 
-  # Time in minutes before overflow items expire
+  # How long expired items remain before automatic deletion (in minutes)
   expired-items-time-minutes: 1440 # 24 hours

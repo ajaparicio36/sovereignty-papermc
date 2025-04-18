@@ -1,15 +1,28 @@
 name: Sovereignty
-version: ${version}
+version: "${version}"
 main: com.tatayless.sovereignty.Sovereignty
 api-version: "1.20"
-description: ${description}
-author: tatayless
+authors:
+  - Tatayless
+description: A nation-based land claiming and war plugin
 commands:
-  sovereignty:
-    description: Main command for Sovereignty plugin
-    usage: /sovereignty <subcommand>
-    aliases: [sov]
+  nation:
+    description: Main nation command
+    usage: /nation <subcommand>
+    aliases: [n]
+  war:
+    description: War management commands
+    usage: /war <subcommand>
+  vault:
+    description: Access nation vault
+    usage: /vault
 permissions:
-  sovereignty.admin:
-    description: Allows access to admin commands
+  sovereignty.admin.bypass:
+    description: Bypass protection
+    default: op
+  sovereignty.admin.chunks:
+    description: Claim more chunks than allowed
+    default: op
+  sovereignty.admin.wars:
+    description: Cancel ongoing wars
     default: op
