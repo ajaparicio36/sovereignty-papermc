@@ -3,6 +3,7 @@ package com.tatayless.sovereignty.services;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tatayless.sovereignty.Sovereignty;
+import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.ChunkLocation;
 import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
@@ -130,7 +131,6 @@ public class NationService {
                 plugin.getLogger().info("Loaded " + nations.size() + " nations from database");
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load nations: " + e.getMessage());
-                e.printStackTrace();
             }
         });
     }
@@ -163,28 +163,25 @@ public class NationService {
         finalSovereigntyPlayer.setRole(Nation.Role.PRESIDENT);
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Save nation - Fixed DSLContext usage
-                context.insertInto(
-                        DSL.table("nations"))
-                        .set(DSL.field("id"), nationId)
-                        .set(DSL.field("name"), name)
-                        .set(DSL.field("power"), 1.0)
-                        .set(DSL.field("power_level"), 1)
-                        .set(DSL.field("president_id"), finalSovereigntyPlayer.getId())
-                        .execute();
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Nation>() {
+                @Override
+                public Nation execute(Connection connection, DSLContext context) throws SQLException {
+                    context.insertInto(
+                            DSL.table("nations"))
+                            .set(DSL.field("id"), nationId)
+                            .set(DSL.field("name"), name)
+                            .set(DSL.field("power"), 1.0)
+                            .set(DSL.field("power_level"), 1)
+                            .set(DSL.field("president_id"), finalSovereigntyPlayer.getId())
+                            .execute();
 
-                // Update player
-                playerService.updatePlayer(finalSovereigntyPlayer);
+                    // Update player
+                    playerService.updatePlayer(finalSovereigntyPlayer);
 
-                nations.put(nationId, nation);
-                return nation;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to create nation: " + e.getMessage());
-                e.printStackTrace();
-                return null;
-            }
+                    nations.put(nationId, nation);
+                    return nation;
+                }
+            });
         });
     }
 
@@ -228,7 +225,6 @@ public class NationService {
                 return true;
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to disband nation: " + e.getMessage());
-                e.printStackTrace();
                 return false;
             }
         });
@@ -366,46 +362,44 @@ public class NationService {
 
     public CompletableFuture<Boolean> saveNation(Nation nation) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Convert sets to JSON
-                String claimedChunksJson = gson.toJson(
-                        nation.getClaimedChunks().stream()
-                                .map(ChunkLocation::toString)
-                                .collect(Collectors.toList()));
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection connection, DSLContext context) throws SQLException {
+                    // Convert sets to JSON
+                    String claimedChunksJson = gson.toJson(
+                            nation.getClaimedChunks().stream()
+                                    .map(ChunkLocation::toString)
+                                    .collect(Collectors.toList()));
 
-                String annexedChunksJson = gson.toJson(
-                        nation.getAnnexedChunks().stream()
-                                .map(ChunkLocation::toString)
-                                .collect(Collectors.toList()));
+                    String annexedChunksJson = gson.toJson(
+                            nation.getAnnexedChunks().stream()
+                                    .map(ChunkLocation::toString)
+                                    .collect(Collectors.toList()));
 
-                String alliancesJson = gson.toJson(new ArrayList<>(nation.getAlliances()));
-                String warsJson = gson.toJson(new ArrayList<>(nation.getWars()));
-                String senatorsJson = gson.toJson(new ArrayList<>(nation.getSenators()));
-                String soldiersJson = gson.toJson(new ArrayList<>(nation.getSoldiers()));
-                String citizensJson = gson.toJson(new ArrayList<>(nation.getCitizens()));
+                    String alliancesJson = gson.toJson(new ArrayList<>(nation.getAlliances()));
+                    String warsJson = gson.toJson(new ArrayList<>(nation.getWars()));
+                    String senatorsJson = gson.toJson(new ArrayList<>(nation.getSenators()));
+                    String soldiersJson = gson.toJson(new ArrayList<>(nation.getSoldiers()));
+                    String citizensJson = gson.toJson(new ArrayList<>(nation.getCitizens()));
 
-                context.update(DSL.table("nations"))
-                        .set(DSL.field("name"), nation.getName())
-                        .set(DSL.field("power"), nation.getPower())
-                        .set(DSL.field("power_level"), nation.getPowerLevel())
-                        .set(DSL.field("claimed_chunks"), claimedChunksJson)
-                        .set(DSL.field("annexed_chunks"), annexedChunksJson)
-                        .set(DSL.field("alliances"), alliancesJson)
-                        .set(DSL.field("wars"), warsJson)
-                        .set(DSL.field("president_id"), nation.getPresidentId())
-                        .set(DSL.field("senators"), senatorsJson)
-                        .set(DSL.field("soldiers"), soldiersJson)
-                        .set(DSL.field("citizens"), citizensJson)
-                        .where(DSL.field("id").eq(nation.getId()))
-                        .execute();
+                    context.update(DSL.table("nations"))
+                            .set(DSL.field("name"), nation.getName())
+                            .set(DSL.field("power"), nation.getPower())
+                            .set(DSL.field("power_level"), nation.getPowerLevel())
+                            .set(DSL.field("claimed_chunks"), claimedChunksJson)
+                            .set(DSL.field("annexed_chunks"), annexedChunksJson)
+                            .set(DSL.field("alliances"), alliancesJson)
+                            .set(DSL.field("wars"), warsJson)
+                            .set(DSL.field("president_id"), nation.getPresidentId())
+                            .set(DSL.field("senators"), senatorsJson)
+                            .set(DSL.field("soldiers"), soldiersJson)
+                            .set(DSL.field("citizens"), citizensJson)
+                            .where(DSL.field("id").eq(nation.getId()))
+                            .execute();
 
-                return true;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to save nation: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            }
+                    return true;
+                }
+            });
         });
     }
 }

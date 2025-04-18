@@ -1,6 +1,7 @@
 package com.tatayless.sovereignty.services;
 
 import com.tatayless.sovereignty.Sovereignty;
+import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import org.bukkit.Bukkit;
@@ -63,7 +64,6 @@ public class WarService {
                 plugin.getLogger().info("Loaded " + activeWars.size() + " active wars from database");
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load wars: " + e.getMessage());
-                e.printStackTrace();
             }
         });
     }
@@ -89,43 +89,43 @@ public class WarService {
         War war = new War(warId, attackerNationId, defenderNationId, requiredKills);
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Insert war record
-                context.insertInto(
-                        DSL.table("wars"),
-                        DSL.field("id"),
-                        DSL.field("attacker_nation_id"),
-                        DSL.field("defender_nation_id"),
-                        DSL.field("required_kills")).values(
-                                warId,
-                                attackerNationId,
-                                defenderNationId,
-                                requiredKills)
-                        .execute();
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<War>() {
+                @Override
+                public War execute(Connection connection, DSLContext context) throws SQLException {
+                    // Insert war record
+                    context.insertInto(
+                            DSL.table("wars"),
+                            DSL.field("id"),
+                            DSL.field("attacker_nation_id"),
+                            DSL.field("defender_nation_id"),
+                            DSL.field("required_kills")).values(
+                                    warId,
+                                    attackerNationId,
+                                    defenderNationId,
+                                    requiredKills)
+                            .execute();
 
-                // Update nations
-                attackerNation.addWar(warId);
-                defenderNation.addWar(warId);
+                    // Update nations
+                    attackerNation.addWar(warId);
+                    defenderNation.addWar(warId);
 
-                nationService.saveNation(attackerNation);
-                nationService.saveNation(defenderNation);
+                    nationService.saveNation(attackerNation);
+                    nationService.saveNation(defenderNation);
 
-                activeWars.put(warId, war);
+                    activeWars.put(warId, war);
 
-                // Notify players
-                notifyNationPlayers(attackerNationId,
-                        plugin.getLocalizationManager().getMessage("war.declared", "nation", defenderNation.getName()));
+                    // Notify players
+                    notifyNationPlayers(attackerNationId,
+                            plugin.getLocalizationManager().getMessage("war.declared", "nation",
+                                    defenderNation.getName()));
 
-                notifyNationPlayers(defenderNationId,
-                        plugin.getLocalizationManager().getMessage("war.received", "nation", attackerNation.getName()));
+                    notifyNationPlayers(defenderNationId,
+                            plugin.getLocalizationManager().getMessage("war.received", "nation",
+                                    attackerNation.getName()));
 
-                return war;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to declare war: " + e.getMessage());
-                e.printStackTrace();
-                return null;
-            }
+                    return war;
+                }
+            });
         });
     }
 
@@ -185,7 +185,6 @@ public class WarService {
                 return true;
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to end war: " + e.getMessage());
-                e.printStackTrace();
                 return false;
             }
         });
@@ -232,7 +231,6 @@ public class WarService {
                 return true;
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to cancel war: " + e.getMessage());
-                e.printStackTrace();
                 return false;
             }
         });
@@ -325,7 +323,6 @@ public class WarService {
                 return true;
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to record kill: " + e.getMessage());
-                e.printStackTrace();
                 return false;
             }
         });

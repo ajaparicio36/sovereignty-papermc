@@ -1,6 +1,7 @@
 package com.tatayless.sovereignty.services;
 
 import com.tatayless.sovereignty.Sovereignty;
+import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import org.bukkit.entity.Player;
 import org.jooq.DSLContext;
@@ -48,7 +49,6 @@ public class PlayerService {
                 plugin.getLogger().info("Loaded " + playerCache.size() + " players from database");
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load players: " + e.getMessage());
-                e.printStackTrace();
             }
         });
     }
@@ -68,33 +68,32 @@ public class PlayerService {
         String id = player.getUniqueId().toString();
         String name = player.getName();
 
+        // Check if player already exists in cache
+        if (playerCache.containsKey(id)) {
+            return playerCache.get(id);
+        }
+
         SovereigntyPlayer sovereigntyPlayer = new SovereigntyPlayer(id, name);
         playerCache.put(id, sovereigntyPlayer);
 
+        // Use our improved database execution method
         CompletableFuture.runAsync(() -> {
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                DSLContext context = plugin.getDatabaseManager().createContext();
-                context.insertInto(
-                        DSL.table("players"),
-                        DSL.field("id"),
-                        DSL.field("name")).values(
-                                id,
-                                name)
-                        .execute();
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to create player: " + e.getMessage());
-                e.printStackTrace();
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
-                    }
+            plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Void>() {
+                @Override
+                public Void execute(Connection connection, DSLContext context) throws SQLException {
+                    context.insertInto(
+                            DSL.table("players"),
+                            DSL.field("id"),
+                            DSL.field("name")).values(
+                                    id,
+                                    name)
+                            .execute();
+                    return null;
                 }
-            }
+            });
+        }).exceptionally(e -> {
+            plugin.getLogger().severe("Failed to create player in database: " + e.getMessage());
+            return null;
         });
 
         return sovereigntyPlayer;
@@ -114,38 +113,25 @@ public class PlayerService {
 
     public CompletableFuture<Boolean> updatePlayer(SovereigntyPlayer player) {
         return CompletableFuture.supplyAsync(() -> {
-            DSLContext context = null;
-            Connection conn = null;
-            try {
-                conn = plugin.getDatabaseManager().getConnection();
-                context = plugin.getDatabaseManager().createContext();
-                String roleStr = null;
-                if (player.getRole() != null) {
-                    roleStr = stringFromRole(player.getRole());
-                }
-
-                context.update(DSL.table("players"))
-                        .set(DSL.field("name"), player.getName())
-                        .set(DSL.field("nation_id"), player.getNationId())
-                        .set(DSL.field("role"), roleStr)
-                        .set(DSL.field("soldier_lives"), player.getSoldierLives())
-                        .where(DSL.field("id").eq(player.getId()))
-                        .execute();
-
-                return true;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to update player: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            } finally {
-                if (conn != null) {
-                    try {
-                        conn.close();
-                    } catch (SQLException e) {
-                        plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection connection, DSLContext context) throws SQLException {
+                    String roleStr = null;
+                    if (player.getRole() != null) {
+                        roleStr = stringFromRole(player.getRole());
                     }
+
+                    context.update(DSL.table("players"))
+                            .set(DSL.field("name"), player.getName())
+                            .set(DSL.field("nation_id"), player.getNationId())
+                            .set(DSL.field("role"), roleStr)
+                            .set(DSL.field("soldier_lives"), player.getSoldierLives())
+                            .where(DSL.field("id").eq(player.getId()))
+                            .execute();
+
+                    return true;
                 }
-            }
+            });
         });
     }
 

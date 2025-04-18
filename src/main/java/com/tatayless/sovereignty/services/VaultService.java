@@ -3,6 +3,7 @@ package com.tatayless.sovereignty.services;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tatayless.sovereignty.Sovereignty;
+import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.Nation;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -39,68 +40,68 @@ public class VaultService {
 
     public void loadVaults() {
         CompletableFuture.runAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Load nation vaults
-                Result<Record> results = context.select().from("nation_vaults").fetch();
+            plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Void>() {
+                @Override
+                public Void execute(Connection conn, DSLContext context) throws SQLException {
+                    // Load nation vaults
+                    Result<Record> results = context.select().from("nation_vaults").fetch();
 
-                for (Record record : results) {
-                    String id = record.get("id", String.class);
-                    String nationId = record.get("nation_id", String.class);
-                    String itemsJson = record.get("items", String.class);
-                    String overflowItemsJson = record.get("overflow_items", String.class);
-                    Object overflowExpiryObj = record.get("overflow_expiry");
+                    for (Record record : results) {
+                        String id = record.get("id", String.class);
+                        String nationId = record.get("nation_id", String.class);
+                        String itemsJson = record.get("items", String.class);
+                        String overflowItemsJson = record.get("overflow_items", String.class);
+                        Object overflowExpiryObj = record.get("overflow_expiry");
 
-                    ItemStack[] items = null;
-                    ItemStack[] overflowItems = null;
-                    Date overflowExpiry = null;
+                        ItemStack[] items = null;
+                        ItemStack[] overflowItems = null;
+                        Date overflowExpiry = null;
 
-                    if (itemsJson != null && !itemsJson.isEmpty()) {
-                        List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
-                                new TypeToken<List<Map<String, Object>>>() {
-                                }.getType());
-                        items = deserializeItems(itemsList);
-                    }
-
-                    if (overflowItemsJson != null && !overflowItemsJson.isEmpty()) {
-                        List<Map<String, Object>> itemsList = gson.fromJson(overflowItemsJson,
-                                new TypeToken<List<Map<String, Object>>>() {
-                                }.getType());
-                        overflowItems = deserializeItems(itemsList);
-                    }
-
-                    if (overflowExpiryObj != null) {
-                        if (overflowExpiryObj instanceof Timestamp) {
-                            overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
-                        } else if (overflowExpiryObj instanceof String) {
-                            // SQLite dates are stored as strings
-                            LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
-                            overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                        if (itemsJson != null && !itemsJson.isEmpty()) {
+                            List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
+                                    new TypeToken<List<Map<String, Object>>>() {
+                                    }.getType());
+                            items = deserializeItems(itemsList);
                         }
+
+                        if (overflowItemsJson != null && !overflowItemsJson.isEmpty()) {
+                            List<Map<String, Object>> itemsList = gson.fromJson(overflowItemsJson,
+                                    new TypeToken<List<Map<String, Object>>>() {
+                                    }.getType());
+                            overflowItems = deserializeItems(itemsList);
+                        }
+
+                        if (overflowExpiryObj != null) {
+                            if (overflowExpiryObj instanceof Timestamp) {
+                                overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
+                            } else if (overflowExpiryObj instanceof String) {
+                                // SQLite dates are stored as strings
+                                LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
+                                overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                            }
+                        }
+
+                        NationVault vault = new NationVault(id, nationId, items, overflowItems, overflowExpiry);
+                        nationVaults.put(nationId, vault);
                     }
 
-                    NationVault vault = new NationVault(id, nationId, items, overflowItems, overflowExpiry);
-                    nationVaults.put(nationId, vault);
+                    // Load vault NPCs
+                    Result<Record> npcResults = context.select().from("vault_npcs").fetch();
+
+                    for (Record record : npcResults) {
+                        int entityId = record.get("entity_id", Integer.class);
+                        String vaultId = record.get("nation_vault_id", String.class);
+                        entityToVault.put(entityId, vaultId);
+                    }
+
+                    plugin.getLogger().info("Loaded " + nationVaults.size() + " nation vaults from database");
+
+                    // Start a task to clean up expired overflow items
+                    scheduleOverflowCleanup();
+
+                    return null;
                 }
-
-                // Load vault NPCs
-                Result<Record> npcResults = context.select().from("vault_npcs").fetch();
-
-                for (Record record : npcResults) {
-                    int entityId = record.get("entity_id", Integer.class);
-                    String vaultId = record.get("nation_vault_id", String.class);
-                    entityToVault.put(entityId, vaultId);
-                }
-
-                plugin.getLogger().info("Loaded " + nationVaults.size() + " nation vaults from database");
-
-                // Start a task to clean up expired overflow items
-                scheduleOverflowCleanup();
-
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to load vaults: " + e.getMessage());
-                e.printStackTrace();
-            }
+            });
         });
     }
 
@@ -162,71 +163,68 @@ public class VaultService {
 
         // Create new vault
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Check if vault exists in DB
-                Record record = context.select().from("nation_vaults")
-                        .where(DSL.field("nation_id").eq(nationId))
-                        .fetchOne();
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<NationVault>() {
+                @Override
+                public NationVault execute(Connection conn, DSLContext context) throws SQLException {
+                    // Check if vault exists in DB
+                    Record record = context.select().from("nation_vaults")
+                            .where(DSL.field("nation_id").eq(nationId))
+                            .fetchOne();
 
-                if (record != null) {
-                    String id = record.get("id", String.class);
-                    String itemsJson = record.get("items", String.class);
-                    String overflowItemsJson = record.get("overflow_items", String.class);
-                    Object overflowExpiryObj = record.get("overflow_expiry");
+                    if (record != null) {
+                        String id = record.get("id", String.class);
+                        String itemsJson = record.get("items", String.class);
+                        String overflowItemsJson = record.get("overflow_items", String.class);
+                        Object overflowExpiryObj = record.get("overflow_expiry");
 
-                    ItemStack[] items = null;
-                    ItemStack[] overflowItems = null;
-                    Date overflowExpiry = null;
+                        ItemStack[] items = null;
+                        ItemStack[] overflowItems = null;
+                        Date overflowExpiry = null;
 
-                    if (itemsJson != null && !itemsJson.isEmpty()) {
-                        List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
-                                new TypeToken<List<Map<String, Object>>>() {
-                                }.getType());
-                        items = deserializeItems(itemsList);
-                    }
-
-                    if (overflowItemsJson != null && !overflowItemsJson.isEmpty()) {
-                        List<Map<String, Object>> itemsList = gson.fromJson(overflowItemsJson,
-                                new TypeToken<List<Map<String, Object>>>() {
-                                }.getType());
-                        overflowItems = deserializeItems(itemsList);
-                    }
-
-                    if (overflowExpiryObj != null) {
-                        if (overflowExpiryObj instanceof Timestamp) {
-                            overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
-                        } else if (overflowExpiryObj instanceof String) {
-                            // SQLite dates are stored as strings
-                            LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
-                            overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                        if (itemsJson != null && !itemsJson.isEmpty()) {
+                            List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
+                                    new TypeToken<List<Map<String, Object>>>() {
+                                    }.getType());
+                            items = deserializeItems(itemsList);
                         }
+
+                        if (overflowItemsJson != null && !overflowItemsJson.isEmpty()) {
+                            List<Map<String, Object>> itemsList = gson.fromJson(overflowItemsJson,
+                                    new TypeToken<List<Map<String, Object>>>() {
+                                    }.getType());
+                            overflowItems = deserializeItems(itemsList);
+                        }
+
+                        if (overflowExpiryObj != null) {
+                            if (overflowExpiryObj instanceof Timestamp) {
+                                overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
+                            } else if (overflowExpiryObj instanceof String) {
+                                // SQLite dates are stored as strings
+                                LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
+                                overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                            }
+                        }
+
+                        NationVault existingVault = new NationVault(id, nationId, items, overflowItems, overflowExpiry);
+                        nationVaults.put(nationId, existingVault);
+                        return existingVault;
                     }
 
-                    NationVault existingVault = new NationVault(id, nationId, items, overflowItems, overflowExpiry);
-                    nationVaults.put(nationId, existingVault);
-                    return existingVault;
+                    // Create new vault in DB
+                    String vaultId = UUID.randomUUID().toString();
+                    context.insertInto(
+                            DSL.table("nation_vaults"),
+                            DSL.field("id"),
+                            DSL.field("nation_id")).values(
+                                    vaultId,
+                                    nationId)
+                            .execute();
+
+                    NationVault newVault = new NationVault(vaultId, nationId, null, null, null);
+                    nationVaults.put(nationId, newVault);
+                    return newVault;
                 }
-
-                // Create new vault in DB
-                String vaultId = UUID.randomUUID().toString();
-                context.insertInto(
-                        DSL.table("nation_vaults"),
-                        DSL.field("id"),
-                        DSL.field("nation_id")).values(
-                                vaultId,
-                                nationId)
-                        .execute();
-
-                NationVault newVault = new NationVault(vaultId, nationId, null, null, null);
-                nationVaults.put(nationId, newVault);
-                return newVault;
-
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to create vault: " + e.getMessage());
-                e.printStackTrace();
-                return null;
-            }
+            });
         });
     }
 
@@ -242,36 +240,35 @@ public class VaultService {
 
     public CompletableFuture<Boolean> saveVault(NationVault vault) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Serialize items
-                String itemsJson = null;
-                String overflowItemsJson = null;
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    // Serialize items
+                    String itemsJson = null;
+                    String overflowItemsJson = null;
 
-                if (vault.getItems() != null) {
-                    itemsJson = gson.toJson(serializeItems(vault.getItems()));
+                    if (vault.getItems() != null) {
+                        itemsJson = gson.toJson(serializeItems(vault.getItems()));
+                    }
+
+                    if (vault.getOverflowItems() != null) {
+                        overflowItemsJson = gson.toJson(serializeItems(vault.getOverflowItems()));
+                    }
+
+                    // Update vault
+                    context.update(DSL.table("nation_vaults"))
+                            .set(DSL.field("items"), itemsJson)
+                            .set(DSL.field("overflow_items"), overflowItemsJson)
+                            .set(DSL.field("overflow_expiry"),
+                                    vault.getOverflowExpiry() != null
+                                            ? new Timestamp(vault.getOverflowExpiry().getTime())
+                                            : null)
+                            .where(DSL.field("id").eq(vault.getId()))
+                            .execute();
+
+                    return true;
                 }
-
-                if (vault.getOverflowItems() != null) {
-                    overflowItemsJson = gson.toJson(serializeItems(vault.getOverflowItems()));
-                }
-
-                // Update vault
-                context.update(DSL.table("nation_vaults"))
-                        .set(DSL.field("items"), itemsJson)
-                        .set(DSL.field("overflow_items"), overflowItemsJson)
-                        .set(DSL.field("overflow_expiry"),
-                                vault.getOverflowExpiry() != null ? new Timestamp(vault.getOverflowExpiry().getTime())
-                                        : null)
-                        .where(DSL.field("id").eq(vault.getId()))
-                        .execute();
-
-                return true;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to save vault: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            }
+            });
         });
     }
 
@@ -287,61 +284,53 @@ public class VaultService {
             }
 
             return CompletableFuture.supplyAsync(() -> {
-                DSLContext context = null;
-                Connection conn = null;
-                try {
-                    // Create the NPC entity
-                    final Villager[] npc = { null };
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        npc[0] = (Villager) location.getWorld().spawnEntity(location, EntityType.VILLAGER);
-                        npc[0].customName(net.kyori.adventure.text.Component.text("Vault: " + nation.getName()));
-                        npc[0].setCustomNameVisible(true);
-                        npc[0].setProfession(Villager.Profession.LIBRARIAN);
-                        npc[0].setAI(false);
-                        npc[0].setInvulnerable(true);
-                        npc[0].setSilent(true);
-                    });
+                return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                    @Override
+                    public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                        // Create the NPC entity
+                        final Villager[] npc = { null };
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            npc[0] = (Villager) location.getWorld().spawnEntity(location, EntityType.VILLAGER);
+                            npc[0].customName(net.kyori.adventure.text.Component.text("Vault: " + nation.getName()));
+                            npc[0].setCustomNameVisible(true);
+                            npc[0].setProfession(Villager.Profession.LIBRARIAN);
+                            npc[0].setAI(false);
+                            npc[0].setInvulnerable(true);
+                            npc[0].setSilent(true);
+                        });
 
-                    // Wait for entity to be created
-                    Thread.sleep(100);
-
-                    // Store the NPC in database
-                    conn = plugin.getDatabaseManager().getConnection();
-                    context = plugin.getDatabaseManager().createContext();
-                    int entityId = npc[0].getEntityId();
-                    String npcId = UUID.randomUUID().toString();
-                    String locationStr = String.format("%f,%f,%f,%s",
-                            location.getX(), location.getY(), location.getZ(), location.getWorld().getName());
-
-                    context.insertInto(
-                            DSL.table("vault_npcs"),
-                            DSL.field("id"),
-                            DSL.field("nation_id"),
-                            DSL.field("nation_vault_id"),
-                            DSL.field("coordinates"),
-                            DSL.field("entity_id")).values(
-                                    npcId,
-                                    nationId,
-                                    vault.getId(),
-                                    locationStr,
-                                    entityId)
-                            .execute();
-
-                    entityToVault.put(entityId, vault.getId());
-                    return true;
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Failed to create vault NPC: " + e.getMessage());
-                    e.printStackTrace();
-                    return false;
-                } finally {
-                    if (conn != null) {
+                        // Wait for entity to be created
                         try {
-                            conn.close();
-                        } catch (SQLException e) {
-                            plugin.getLogger().severe("Failed to close connection: " + e.getMessage());
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new SQLException("Thread interrupted", e);
                         }
+
+                        // Store the NPC in database
+                        int entityId = npc[0].getEntityId();
+                        String npcId = UUID.randomUUID().toString();
+                        String locationStr = String.format("%f,%f,%f,%s",
+                                location.getX(), location.getY(), location.getZ(), location.getWorld().getName());
+
+                        context.insertInto(
+                                DSL.table("vault_npcs"),
+                                DSL.field("id"),
+                                DSL.field("nation_id"),
+                                DSL.field("nation_vault_id"),
+                                DSL.field("coordinates"),
+                                DSL.field("entity_id")).values(
+                                        npcId,
+                                        nationId,
+                                        vault.getId(),
+                                        locationStr,
+                                        entityId)
+                                .execute();
+
+                        entityToVault.put(entityId, vault.getId());
+                        return true;
                     }
-                }
+                });
             });
         });
     }

@@ -3,6 +3,7 @@ package com.tatayless.sovereignty.services;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tatayless.sovereignty.Sovereignty;
+import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.Nation;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.ItemStack;
@@ -36,90 +37,90 @@ public class TradeService {
 
     public void loadTrades() {
         CompletableFuture.runAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Load trades
-                Result<Record> results = context.select().from("trades").fetch();
+            plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Void>() {
+                @Override
+                public Void execute(Connection conn, DSLContext context) throws SQLException {
+                    // Load trades
+                    Result<Record> results = context.select().from("trades").fetch();
 
-                for (Record record : results) {
-                    String id = record.get("id", String.class);
-                    String sendingNationId = record.get("sending_nation_id", String.class);
-                    String receivingNationId = record.get("receiving_nation_id", String.class);
-                    String status = record.get("status", String.class);
-                    int consecutiveTrades = record.get("consecutive_trades", Integer.class);
-                    Object lastExecutionObj = record.get("last_execution");
+                    for (Record record : results) {
+                        String id = record.get("id", String.class);
+                        String sendingNationId = record.get("sending_nation_id", String.class);
+                        String receivingNationId = record.get("receiving_nation_id", String.class);
+                        String status = record.get("status", String.class);
+                        int consecutiveTrades = record.get("consecutive_trades", Integer.class);
+                        Object lastExecutionObj = record.get("last_execution");
 
-                    Date lastExecution = null;
-                    if (lastExecutionObj != null) {
-                        if (lastExecutionObj instanceof Timestamp) {
-                            lastExecution = new Date(((Timestamp) lastExecutionObj).getTime());
-                        } else if (lastExecutionObj instanceof String) {
-                            // SQLite dates are stored as strings
-                            LocalDateTime ldt = LocalDateTime.parse((String) lastExecutionObj);
-                            lastExecution = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                        Date lastExecution = null;
+                        if (lastExecutionObj != null) {
+                            if (lastExecutionObj instanceof Timestamp) {
+                                lastExecution = new Date(((Timestamp) lastExecutionObj).getTime());
+                            } else if (lastExecutionObj instanceof String) {
+                                // SQLite dates are stored as strings
+                                LocalDateTime ldt = LocalDateTime.parse((String) lastExecutionObj);
+                                lastExecution = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                            }
                         }
+
+                        Trade trade = new Trade(id, sendingNationId, receivingNationId);
+                        trade.setStatus(TradeStatus.valueOf(status.toUpperCase()));
+                        trade.setConsecutiveTrades(consecutiveTrades);
+                        trade.setLastExecution(lastExecution);
+
+                        trades.put(id, trade);
                     }
 
-                    Trade trade = new Trade(id, sendingNationId, receivingNationId);
-                    trade.setStatus(TradeStatus.valueOf(status.toUpperCase()));
-                    trade.setConsecutiveTrades(consecutiveTrades);
-                    trade.setLastExecution(lastExecution);
+                    // Load trade vaults
+                    Result<Record> vaultResults = context.select().from("trade_vaults").fetch();
 
-                    trades.put(id, trade);
-                }
+                    for (Record record : vaultResults) {
+                        String id = record.get("id", String.class);
+                        String tradeId = record.get("trade_id", String.class);
+                        String sendingItemsJson = record.get("sending_items_vault", String.class);
+                        String receivingItemsJson = record.get("receiving_items_vault", String.class);
+                        int executionInterval = record.get("execution_interval", Integer.class);
+                        Object nextExecutionObj = record.get("next_execution");
 
-                // Load trade vaults
-                Result<Record> vaultResults = context.select().from("trade_vaults").fetch();
+                        ItemStack[] sendingItems = null;
+                        ItemStack[] receivingItems = null;
+                        Date nextExecution = null;
 
-                for (Record record : vaultResults) {
-                    String id = record.get("id", String.class);
-                    String tradeId = record.get("trade_id", String.class);
-                    String sendingItemsJson = record.get("sending_items_vault", String.class);
-                    String receivingItemsJson = record.get("receiving_items_vault", String.class);
-                    int executionInterval = record.get("execution_interval", Integer.class);
-                    Object nextExecutionObj = record.get("next_execution");
-
-                    ItemStack[] sendingItems = null;
-                    ItemStack[] receivingItems = null;
-                    Date nextExecution = null;
-
-                    if (sendingItemsJson != null && !sendingItemsJson.isEmpty()) {
-                        List<Map<String, Object>> itemsList = gson.fromJson(sendingItemsJson,
-                                new TypeToken<List<Map<String, Object>>>() {
-                                }.getType());
-                        sendingItems = deserializeItems(itemsList);
-                    }
-
-                    if (receivingItemsJson != null && !receivingItemsJson.isEmpty()) {
-                        List<Map<String, Object>> itemsList = gson.fromJson(receivingItemsJson,
-                                new TypeToken<List<Map<String, Object>>>() {
-                                }.getType());
-                        receivingItems = deserializeItems(itemsList);
-                    }
-
-                    if (nextExecutionObj != null) {
-                        if (nextExecutionObj instanceof Timestamp) {
-                            nextExecution = new Date(((Timestamp) nextExecutionObj).getTime());
-                        } else if (nextExecutionObj instanceof String) {
-                            // SQLite dates are stored as strings
-                            LocalDateTime ldt = LocalDateTime.parse((String) nextExecutionObj);
-                            nextExecution = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                        if (sendingItemsJson != null && !sendingItemsJson.isEmpty()) {
+                            List<Map<String, Object>> itemsList = gson.fromJson(sendingItemsJson,
+                                    new TypeToken<List<Map<String, Object>>>() {
+                                    }.getType());
+                            sendingItems = deserializeItems(itemsList);
                         }
+
+                        if (receivingItemsJson != null && !receivingItemsJson.isEmpty()) {
+                            List<Map<String, Object>> itemsList = gson.fromJson(receivingItemsJson,
+                                    new TypeToken<List<Map<String, Object>>>() {
+                                    }.getType());
+                            receivingItems = deserializeItems(itemsList);
+                        }
+
+                        if (nextExecutionObj != null) {
+                            if (nextExecutionObj instanceof Timestamp) {
+                                nextExecution = new Date(((Timestamp) nextExecutionObj).getTime());
+                            } else if (nextExecutionObj instanceof String) {
+                                // SQLite dates are stored as strings
+                                LocalDateTime ldt = LocalDateTime.parse((String) nextExecutionObj);
+                                nextExecution = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                            }
+                        }
+
+                        TradeVault tradeVault = new TradeVault(id, tradeId, sendingItems, receivingItems,
+                                executionInterval);
+                        tradeVault.setNextExecution(nextExecution);
+                        tradeVaults.put(tradeId, tradeVault);
                     }
 
-                    TradeVault tradeVault = new TradeVault(id, tradeId, sendingItems, receivingItems,
-                            executionInterval);
-                    tradeVault.setNextExecution(nextExecution);
-                    tradeVaults.put(tradeId, tradeVault);
+                    plugin.getLogger().info("Loaded " + trades.size() + " trades and " +
+                            tradeVaults.size() + " trade vaults from database");
+
+                    return null;
                 }
-
-                plugin.getLogger().info("Loaded " + trades.size() + " trades and " +
-                        tradeVaults.size() + " trade vaults from database");
-
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to load trades: " + e.getMessage());
-                e.printStackTrace();
-            }
+            });
         });
     }
 
@@ -172,64 +173,62 @@ public class TradeService {
         trade.setStatus(TradeStatus.PENDING);
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Insert trade record
-                context.insertInto(
-                        DSL.table("trades"),
-                        DSL.field("id"),
-                        DSL.field("sending_nation_id"),
-                        DSL.field("receiving_nation_id"),
-                        DSL.field("status")).values(
-                                tradeId,
-                                sendingNationId,
-                                receivingNationId,
-                                "pending")
-                        .execute();
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Trade>() {
+                @Override
+                public Trade execute(Connection conn, DSLContext context) throws SQLException {
+                    // Insert trade record
+                    context.insertInto(
+                            DSL.table("trades"),
+                            DSL.field("id"),
+                            DSL.field("sending_nation_id"),
+                            DSL.field("receiving_nation_id"),
+                            DSL.field("status")).values(
+                                    tradeId,
+                                    sendingNationId,
+                                    receivingNationId,
+                                    "pending")
+                            .execute();
 
-                trades.put(tradeId, trade);
+                    trades.put(tradeId, trade);
 
-                // Create empty trade vault
-                String vaultId = UUID.randomUUID().toString();
-                int executionInterval = 3; // Default interval
+                    // Create empty trade vault
+                    String vaultId = UUID.randomUUID().toString();
+                    int executionInterval = 3; // Default interval
 
-                // Calculate next execution time (3 MC days = 60 minutes in real time)
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.MINUTE, 60);
-                Date nextExecution = calendar.getTime();
+                    // Calculate next execution time (3 MC days = 60 minutes in real time)
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.MINUTE, 60);
+                    Date nextExecution = calendar.getTime();
 
-                context.insertInto(
-                        DSL.table("trade_vaults"),
-                        DSL.field("id"),
-                        DSL.field("trade_id"),
-                        DSL.field("execution_interval"),
-                        DSL.field("next_execution")).values(
-                                vaultId,
-                                tradeId,
-                                executionInterval,
-                                new Timestamp(nextExecution.getTime()))
-                        .execute();
+                    context.insertInto(
+                            DSL.table("trade_vaults"),
+                            DSL.field("id"),
+                            DSL.field("trade_id"),
+                            DSL.field("execution_interval"),
+                            DSL.field("next_execution")).values(
+                                    vaultId,
+                                    tradeId,
+                                    executionInterval,
+                                    new Timestamp(nextExecution.getTime()))
+                            .execute();
 
-                TradeVault tradeVault = new TradeVault(vaultId, tradeId, null, null, executionInterval);
-                tradeVault.setNextExecution(nextExecution);
-                tradeVaults.put(tradeId, tradeVault);
+                    TradeVault tradeVault = new TradeVault(vaultId, tradeId, null, null, executionInterval);
+                    tradeVault.setNextExecution(nextExecution);
+                    tradeVaults.put(tradeId, tradeVault);
 
-                // Notify receiving nation
-                Nation receivingNation2 = nationService.getNation(receivingNationId);
-                if (receivingNation2 != null) {
-                    for (String officerId : getOfficerIds(receivingNation2)) {
-                        notifyPlayer(officerId, plugin.getLocalizationManager().getMessage(
-                                "trade.received",
-                                "nation", sendingNation.getName()));
+                    // Notify receiving nation
+                    Nation receivingNation2 = nationService.getNation(receivingNationId);
+                    if (receivingNation2 != null) {
+                        for (String officerId : getOfficerIds(receivingNation2)) {
+                            notifyPlayer(officerId, plugin.getLocalizationManager().getMessage(
+                                    "trade.received",
+                                    "nation", sendingNation.getName()));
+                        }
                     }
-                }
 
-                return trade;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to propose trade: " + e.getMessage());
-                e.printStackTrace();
-                return null;
-            }
+                    return trade;
+                }
+            });
         });
     }
 
@@ -245,39 +244,37 @@ public class TradeService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Update trade status
-                context.update(DSL.table("trades"))
-                        .set(DSL.field("status"), "active")
-                        .where(DSL.field("id").eq(tradeId))
-                        .execute();
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    // Update trade status
+                    context.update(DSL.table("trades"))
+                            .set(DSL.field("status"), "active")
+                            .where(DSL.field("id").eq(tradeId))
+                            .execute();
 
-                trade.setStatus(TradeStatus.ACTIVE);
+                    trade.setStatus(TradeStatus.ACTIVE);
 
-                // Notify nations
-                Nation sendingNation = nationService.getNation(trade.getSendingNationId());
+                    // Notify nations
+                    Nation sendingNation = nationService.getNation(trade.getSendingNationId());
 
-                if (sendingNation != null) {
-                    for (String memberId : getAllMemberIds(sendingNation)) {
+                    if (sendingNation != null) {
+                        for (String memberId : getAllMemberIds(sendingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.accepted",
+                                    "nation", receivingNation.getName()));
+                        }
+                    }
+
+                    for (String memberId : getAllMemberIds(receivingNation)) {
                         notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
                                 "trade.accepted",
-                                "nation", receivingNation.getName()));
+                                "nation", sendingNation.getName()));
                     }
-                }
 
-                for (String memberId : getAllMemberIds(receivingNation)) {
-                    notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                            "trade.accepted",
-                            "nation", sendingNation.getName()));
+                    return true;
                 }
-
-                return true;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to accept trade: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            }
+            });
         });
     }
 
@@ -297,56 +294,54 @@ public class TradeService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Update trade status
-                context.update(DSL.table("trades"))
-                        .set(DSL.field("status"), "cancelled")
-                        .where(DSL.field("id").eq(tradeId))
-                        .execute();
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    // Update trade status
+                    context.update(DSL.table("trades"))
+                            .set(DSL.field("status"), "cancelled")
+                            .where(DSL.field("id").eq(tradeId))
+                            .execute();
 
-                trade.setStatus(TradeStatus.CANCELLED);
+                    trade.setStatus(TradeStatus.CANCELLED);
 
-                // Return items to nation vaults
-                TradeVault tradeVault = tradeVaults.get(tradeId);
-                if (tradeVault != null) {
-                    // Return sending items to sending nation
-                    if (tradeVault.getSendingItems() != null && tradeVault.getSendingItems().length > 0) {
-                        returnItemsToNation(trade.getSendingNationId(), tradeVault.getSendingItems());
+                    // Return items to nation vaults
+                    TradeVault tradeVault = tradeVaults.get(tradeId);
+                    if (tradeVault != null) {
+                        // Return sending items to sending nation
+                        if (tradeVault.getSendingItems() != null && tradeVault.getSendingItems().length > 0) {
+                            returnItemsToNation(trade.getSendingNationId(), tradeVault.getSendingItems());
+                        }
+
+                        // Return receiving items to receiving nation
+                        if (tradeVault.getReceivingItems() != null && tradeVault.getReceivingItems().length > 0) {
+                            returnItemsToNation(trade.getReceivingNationId(), tradeVault.getReceivingItems());
+                        }
                     }
 
-                    // Return receiving items to receiving nation
-                    if (tradeVault.getReceivingItems() != null && tradeVault.getReceivingItems().length > 0) {
-                        returnItemsToNation(trade.getReceivingNationId(), tradeVault.getReceivingItems());
+                    // Notify nations
+                    String cancellerNationName = sendingNation.isOfficer(playerId) ? sendingNation.getName()
+                            : receivingNation.getName();
+
+                    if (sendingNation != null && !sendingNation.getName().equals(cancellerNationName)) {
+                        for (String memberId : getAllMemberIds(sendingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.cancelled",
+                                    "nation", cancellerNationName));
+                        }
                     }
+
+                    if (receivingNation != null && !receivingNation.getName().equals(cancellerNationName)) {
+                        for (String memberId : getAllMemberIds(receivingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.cancelled",
+                                    "nation", cancellerNationName));
+                        }
+                    }
+
+                    return true;
                 }
-
-                // Notify nations
-                String cancellerNationName = sendingNation.isOfficer(playerId) ? sendingNation.getName()
-                        : receivingNation.getName();
-
-                if (sendingNation != null && !sendingNation.getName().equals(cancellerNationName)) {
-                    for (String memberId : getAllMemberIds(sendingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                                "trade.cancelled",
-                                "nation", cancellerNationName));
-                    }
-                }
-
-                if (receivingNation != null && !receivingNation.getName().equals(cancellerNationName)) {
-                    for (String memberId : getAllMemberIds(receivingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                                "trade.cancelled",
-                                "nation", cancellerNationName));
-                    }
-                }
-
-                return true;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to cancel trade: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            }
+            });
         });
     }
 
@@ -359,124 +354,120 @@ public class TradeService {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                Nation sendingNation = nationService.getNation(trade.getSendingNationId());
-                Nation receivingNation = nationService.getNation(trade.getReceivingNationId());
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    Nation sendingNation = nationService.getNation(trade.getSendingNationId());
+                    Nation receivingNation = nationService.getNation(trade.getReceivingNationId());
 
-                if (sendingNation == null || receivingNation == null) {
-                    return false;
+                    if (sendingNation == null || receivingNation == null) {
+                        return false;
+                    }
+
+                    // Check if nations are at war
+                    if (plugin.getServiceManager().getWarService().isAtWar(
+                            trade.getSendingNationId(), trade.getReceivingNationId())) {
+                        // Cancel the trade if nations are at war
+                        cancelTrade(tradeId, sendingNation.getPresidentId());
+                        return false;
+                    }
+
+                    // Check if both sides have supplied required items
+                    boolean tradeSuccess = true;
+                    if ((tradeVault.getSendingItems() == null || allEmpty(tradeVault.getSendingItems())) ||
+                            (tradeVault.getReceivingItems() == null || allEmpty(tradeVault.getReceivingItems()))) {
+                        tradeSuccess = false;
+                    }
+
+                    if (tradeSuccess) {
+                        // Exchange items
+                        transferItems(trade.getSendingNationId(), tradeVault.getReceivingItems());
+                        transferItems(trade.getReceivingNationId(), tradeVault.getSendingItems());
+
+                        // Update consecutive trades counter
+                        trade.incrementConsecutiveTrades();
+
+                        // Update trade in database
+                        context.update(DSL.table("trades"))
+                                .set(DSL.field("consecutive_trades"), trade.getConsecutiveTrades())
+                                .set(DSL.field("last_execution"), new Timestamp(System.currentTimeMillis()))
+                                .where(DSL.field("id").eq(tradeId))
+                                .execute();
+
+                        // Update nation power if needed
+                        if (trade.getConsecutiveTrades() % 3 == 0) {
+                            // +0.05 power for every 3 consecutive trades
+                            double sendingPower = sendingNation.getPower() + 0.05;
+                            double receivingPower = receivingNation.getPower() + 0.05;
+
+                            sendingNation.setPower(sendingPower);
+                            receivingNation.setPower(receivingPower);
+
+                            nationService.saveNation(sendingNation);
+                            nationService.saveNation(receivingNation);
+                        }
+
+                        // Notify nations
+                        for (String memberId : getAllMemberIds(sendingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.completed",
+                                    "nation", receivingNation.getName()));
+                        }
+
+                        for (String memberId : getAllMemberIds(receivingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.completed",
+                                    "nation", sendingNation.getName()));
+                        }
+                    } else {
+                        // Failed trade
+                        trade.resetConsecutiveTrades();
+
+                        // Return items to their owners
+                        if (tradeVault.getSendingItems() != null && !allEmpty(tradeVault.getSendingItems())) {
+                            returnItemsToNation(trade.getSendingNationId(), tradeVault.getSendingItems());
+                        }
+
+                        if (tradeVault.getReceivingItems() != null && !allEmpty(tradeVault.getReceivingItems())) {
+                            returnItemsToNation(trade.getReceivingNationId(), tradeVault.getReceivingItems());
+                        }
+
+                        // Update trade in database
+                        context.update(DSL.table("trades"))
+                                .set(DSL.field("consecutive_trades"), 0)
+                                .set(DSL.field("last_execution"), new Timestamp(System.currentTimeMillis()))
+                                .where(DSL.field("id").eq(tradeId))
+                                .execute();
+
+                        // Notify nations of failure
+                        for (String memberId : getAllMemberIds(sendingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.failed",
+                                    "nation", receivingNation.getName()));
+                        }
+
+                        for (String memberId : getAllMemberIds(receivingNation)) {
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                                    "trade.failed",
+                                    "nation", sendingNation.getName()));
+                        }
+                    }
+
+                    // Reset trade vault
+                    tradeVault.setSendingItems(null);
+                    tradeVault.setReceivingItems(null);
+
+                    // Calculate next execution time
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.MINUTE, tradeVault.getExecutionInterval() * 20); // Convert MC days to minutes
+                    tradeVault.setNextExecution(calendar.getTime());
+
+                    // Update vault in database
+                    updateTradeVault(tradeVault);
+
+                    return tradeSuccess;
                 }
-
-                // Check if nations are at war
-                if (plugin.getServiceManager().getWarService().isAtWar(
-                        trade.getSendingNationId(), trade.getReceivingNationId())) {
-                    // Cancel the trade if nations are at war
-                    cancelTrade(tradeId, sendingNation.getPresidentId());
-                    return false;
-                }
-
-                // Check if both sides have supplied required items
-                boolean tradeSuccess = true;
-                if ((tradeVault.getSendingItems() == null || allEmpty(tradeVault.getSendingItems())) ||
-                        (tradeVault.getReceivingItems() == null || allEmpty(tradeVault.getReceivingItems()))) {
-                    tradeSuccess = false;
-                }
-
-                if (tradeSuccess) {
-                    // Exchange items
-                    transferItems(trade.getSendingNationId(), tradeVault.getReceivingItems()); // Sender receives
-                                                                                               // receiving items
-                    transferItems(trade.getReceivingNationId(), tradeVault.getSendingItems()); // Receiver receives
-                                                                                               // sending items
-
-                    // Update consecutive trades counter
-                    trade.incrementConsecutiveTrades();
-
-                    // Update trade in database
-                    context.update(DSL.table("trades"))
-                            .set(DSL.field("consecutive_trades"), trade.getConsecutiveTrades())
-                            .set(DSL.field("last_execution"), new Timestamp(System.currentTimeMillis()))
-                            .where(DSL.field("id").eq(tradeId))
-                            .execute();
-
-                    // Update nation power if needed
-                    if (trade.getConsecutiveTrades() % 3 == 0) {
-                        // +0.05 power for every 3 consecutive trades
-                        double sendingPower = sendingNation.getPower() + 0.05;
-                        double receivingPower = receivingNation.getPower() + 0.05;
-
-                        sendingNation.setPower(sendingPower);
-                        receivingNation.setPower(receivingPower);
-
-                        nationService.saveNation(sendingNation);
-                        nationService.saveNation(receivingNation);
-                    }
-
-                    // Notify nations
-                    for (String memberId : getAllMemberIds(sendingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                                "trade.completed",
-                                "nation", receivingNation.getName()));
-                    }
-
-                    for (String memberId : getAllMemberIds(receivingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                                "trade.completed",
-                                "nation", sendingNation.getName()));
-                    }
-                } else {
-                    // Failed trade
-                    trade.resetConsecutiveTrades();
-
-                    // Return items to their owners
-                    if (tradeVault.getSendingItems() != null && !allEmpty(tradeVault.getSendingItems())) {
-                        returnItemsToNation(trade.getSendingNationId(), tradeVault.getSendingItems());
-                    }
-
-                    if (tradeVault.getReceivingItems() != null && !allEmpty(tradeVault.getReceivingItems())) {
-                        returnItemsToNation(trade.getReceivingNationId(), tradeVault.getReceivingItems());
-                    }
-
-                    // Update trade in database
-                    context.update(DSL.table("trades"))
-                            .set(DSL.field("consecutive_trades"), 0)
-                            .set(DSL.field("last_execution"), new Timestamp(System.currentTimeMillis()))
-                            .where(DSL.field("id").eq(tradeId))
-                            .execute();
-
-                    // Notify nations of failure
-                    for (String memberId : getAllMemberIds(sendingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                                "trade.failed",
-                                "nation", receivingNation.getName()));
-                    }
-
-                    for (String memberId : getAllMemberIds(receivingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
-                                "trade.failed",
-                                "nation", sendingNation.getName()));
-                    }
-                }
-
-                // Reset trade vault
-                tradeVault.setSendingItems(null);
-                tradeVault.setReceivingItems(null);
-
-                // Calculate next execution time
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.MINUTE, tradeVault.getExecutionInterval() * 20); // Convert MC days to minutes
-                tradeVault.setNextExecution(calendar.getTime());
-
-                // Update vault in database
-                updateTradeVault(tradeVault);
-
-                return tradeSuccess;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to execute trade: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            }
+            });
         });
     }
 
@@ -545,36 +536,34 @@ public class TradeService {
 
     private CompletableFuture<Boolean> updateTradeVault(TradeVault vault) {
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = plugin.getDatabaseManager().getConnection()) {
-                DSLContext context = plugin.getDatabaseManager().createContextSafe(conn);
-                // Serialize items
-                String sendingItemsJson = null;
-                String receivingItemsJson = null;
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    // Serialize items
+                    String sendingItemsJson = null;
+                    String receivingItemsJson = null;
 
-                if (vault.getSendingItems() != null) {
-                    sendingItemsJson = gson.toJson(serializeItems(vault.getSendingItems()));
+                    if (vault.getSendingItems() != null) {
+                        sendingItemsJson = gson.toJson(serializeItems(vault.getSendingItems()));
+                    }
+
+                    if (vault.getReceivingItems() != null) {
+                        receivingItemsJson = gson.toJson(serializeItems(vault.getReceivingItems()));
+                    }
+
+                    // Update vault
+                    context.update(DSL.table("trade_vaults"))
+                            .set(DSL.field("sending_items_vault"), sendingItemsJson)
+                            .set(DSL.field("receiving_items_vault"), receivingItemsJson)
+                            .set(DSL.field("next_execution"),
+                                    vault.getNextExecution() != null ? new Timestamp(vault.getNextExecution().getTime())
+                                            : null)
+                            .where(DSL.field("id").eq(vault.getId()))
+                            .execute();
+
+                    return true;
                 }
-
-                if (vault.getReceivingItems() != null) {
-                    receivingItemsJson = gson.toJson(serializeItems(vault.getReceivingItems()));
-                }
-
-                // Update vault
-                context.update(DSL.table("trade_vaults"))
-                        .set(DSL.field("sending_items_vault"), sendingItemsJson)
-                        .set(DSL.field("receiving_items_vault"), receivingItemsJson)
-                        .set(DSL.field("next_execution"),
-                                vault.getNextExecution() != null ? new Timestamp(vault.getNextExecution().getTime())
-                                        : null)
-                        .where(DSL.field("id").eq(vault.getId()))
-                        .execute();
-
-                return true;
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to update trade vault: " + e.getMessage());
-                e.printStackTrace();
-                return false;
-            }
+            });
         });
     }
 

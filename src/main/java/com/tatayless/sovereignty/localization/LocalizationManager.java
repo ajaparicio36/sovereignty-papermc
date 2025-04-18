@@ -56,7 +56,6 @@ public class LocalizationManager {
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to load language file: " + lang + ".yml");
-            e.printStackTrace();
         }
     }
 

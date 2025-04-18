@@ -39,7 +39,6 @@ public class TableManager {
                 future.complete(null);
             } catch (Exception e) {
                 plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
-                e.printStackTrace(); // Add stack trace for better debugging
                 future.completeExceptionally(e);
             }
         });
