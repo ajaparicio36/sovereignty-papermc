@@ -56,6 +56,11 @@ public class Nation {
         updatePowerLevel();
     }
 
+    public void addPower(double amount) {
+        this.power += amount;
+        updatePowerLevel();
+    }
+
     public int getPowerLevel() {
         return powerLevel;
     }

@@ -20,7 +20,6 @@ public class NPCListener implements Listener {
     private final PlayerService playerService;
     private final NationService nationService;
     private final VaultService vaultService;
-    @SuppressWarnings("unused")
     private final TradeService tradeService;
 
     public NPCListener(Sovereignty plugin) {
@@ -31,6 +30,7 @@ public class NPCListener implements Listener {
         this.tradeService = plugin.getServiceManager().getTradeService();
     }
 
+    @SuppressWarnings("unused")
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         Entity entity = event.getRightClicked();
@@ -71,12 +71,24 @@ public class NPCListener implements Listener {
         }
 
         // Check if this is a trade vault NPC
-        // This would require additional lookup similar to the vault NPC check
-        // For brevity, assuming we have another mapping in VaultService for trade NPCs
+        String tradeId = tradeService.getTradeIdFromEntity(entityId);
+        if (tradeId != null) {
+            event.setCancelled(true); // Cancel normal villager interaction
 
-        // If this is a trade vault NPC, handle accordingly
-        // This would look up the trade ID and whether this is for sending or receiving
-        // items
-        // Then open the appropriate trade vault interface
+            String playerId = player.getUniqueId().toString();
+            SovereigntyPlayer sovereigntyPlayer = playerService.getPlayer(playerId);
+
+            if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
+                return;
+            }
+
+            // Determine if this NPC is for the sending or receiving nation
+            boolean isSenderNPC = tradeService.isSenderEntity(entityId);
+            String nationId = sovereigntyPlayer.getNationId();
+
+            // Open the corresponding trade vault
+            tradeService.openTradeVault(player, nationId, tradeId);
+        }
     }
 }

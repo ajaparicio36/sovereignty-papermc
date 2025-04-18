@@ -150,6 +150,23 @@ public class ConfigManager {
         return config.getInt("vaults.max-pages", 10);
     }
 
+    // Trade Settings
+    public int getTradeConsecutiveForPower() {
+        return config.getInt("trade.consecutive-trades-for-power", 5);
+    }
+    
+    public double getTradePowerIncrement() {
+        return config.getDouble("trade.power-increment", 0.1);
+    }
+
+    public int getDefaultTradeInterval() {
+        return config.getInt("trade.default-interval-days", 3);
+    }
+
+    public int getMaxTradeInterval() {
+        return config.getInt("trade.max-interval-days", 7);
+    }
+
     public FileConfiguration getConfig() {
         return config;
     }
