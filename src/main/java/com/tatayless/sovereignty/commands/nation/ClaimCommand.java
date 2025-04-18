@@ -3,16 +3,21 @@ package com.tatayless.sovereignty.commands.nation;
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
+import com.tatayless.sovereignty.managers.ToggleManager;
 import org.bukkit.entity.Player;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ClaimCommand implements NationCommandExecutor.SubCommand {
     private final Sovereignty plugin;
+    private final ToggleManager toggleManager;
 
-    public ClaimCommand(Sovereignty plugin) {
+    public ClaimCommand(Sovereignty plugin, ToggleManager toggleManager) {
         this.plugin = plugin;
+        this.toggleManager = toggleManager;
     }
 
     @Override
@@ -22,7 +27,7 @@ public class ClaimCommand implements NationCommandExecutor.SubCommand {
 
     @Override
     public String getDescription() {
-        return "Claim the current chunk for your nation";
+        return "Claim the current chunk for your nation or toggle auto-claiming";
     }
 
     @Override
@@ -47,6 +52,17 @@ public class ClaimCommand implements NationCommandExecutor.SubCommand {
             return true;
         }
 
+        // Check if this is a toggle request
+        if (args.length > 0 && args[0].equalsIgnoreCase("toggle")) {
+            boolean isActive = toggleManager.toggleAutoClaim(player);
+            if (isActive) {
+                player.sendMessage("§aAuto-claim mode enabled. Walk into chunks to claim them automatically.");
+            } else {
+                player.sendMessage("§cAuto-claim mode disabled.");
+            }
+            return true;
+        }
+
         // Try to claim the chunk
         plugin.getServiceManager().getChunkService().claimChunk(player, player.getLocation().getChunk());
         return true;
@@ -54,7 +70,11 @@ public class ClaimCommand implements NationCommandExecutor.SubCommand {
 
     @Override
     public List<String> tabComplete(Player player, String[] args) {
-        // No tab completion for chunk claiming
+        if (args.length == 1) {
+            return Arrays.asList("toggle").stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
         return Collections.emptyList();
     }
 }

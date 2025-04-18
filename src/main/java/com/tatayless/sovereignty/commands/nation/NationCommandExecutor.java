@@ -1,6 +1,7 @@
 package com.tatayless.sovereignty.commands.nation;
 
 import com.tatayless.sovereignty.Sovereignty;
+import com.tatayless.sovereignty.managers.ToggleManager;
 import com.tatayless.sovereignty.services.NationService;
 import com.tatayless.sovereignty.services.PlayerService;
 import org.bukkit.command.Command;
@@ -25,12 +26,15 @@ public class NationCommandExecutor implements CommandExecutor, TabCompleter {
         this.nationService = plugin.getServiceManager().getNationService();
         this.playerService = plugin.getServiceManager().getPlayerService();
 
+        // Get access to toggleManager directly from CommandManager
+        ToggleManager toggleManager = plugin.getCommandManager().getToggleManager();
+
         // Register subcommands
         registerSubCommand(new CreateCommand(plugin));
         registerSubCommand(new DisbandCommand(plugin));
         registerSubCommand(new InfoCommand(plugin));
-        registerSubCommand(new ClaimCommand(plugin));
-        registerSubCommand(new UnclaimCommand(plugin));
+        this.registerSubCommand(new ClaimCommand(plugin, toggleManager));
+        this.registerSubCommand(new UnclaimCommand(plugin, toggleManager));
         registerSubCommand(new InviteCommand(plugin));
         registerSubCommand(new JoinCommand(plugin));
         registerSubCommand(new LeaveCommand(plugin));

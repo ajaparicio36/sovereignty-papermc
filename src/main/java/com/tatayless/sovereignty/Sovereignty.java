@@ -77,4 +77,13 @@ public class Sovereignty extends JavaPlugin {
     public ServiceManager getServiceManager() {
         return serviceManager;
     }
+
+    /**
+     * Get the command manager
+     * 
+     * @return The command manager
+     */
+    public CommandManager getCommandManager() {
+        return commandManager;
+    }
 }

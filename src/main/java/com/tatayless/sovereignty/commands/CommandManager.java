@@ -4,13 +4,17 @@ import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.commands.nation.*;
 import com.tatayless.sovereignty.commands.vault.VaultCommand;
 import com.tatayless.sovereignty.commands.war.WarCommand;
+import com.tatayless.sovereignty.listeners.PlayerMoveListener;
+import com.tatayless.sovereignty.managers.ToggleManager;
 import org.bukkit.command.PluginCommand;
 
 public class CommandManager {
     private final Sovereignty plugin;
+    private ToggleManager toggleManager;
 
     public CommandManager(Sovereignty plugin) {
         this.plugin = plugin;
+        this.toggleManager = new ToggleManager(plugin);
     }
 
     public void registerCommands() {
@@ -37,5 +41,13 @@ public class CommandManager {
             vaultCommand.setExecutor(vaultExecutor);
             vaultCommand.setTabCompleter(vaultExecutor);
         }
+
+        // Register player movement listener for auto claim/unclaim
+        plugin.getServer().getPluginManager().registerEvents(
+                new PlayerMoveListener(plugin, toggleManager), plugin);
+    }
+
+    public ToggleManager getToggleManager() {
+        return toggleManager;
     }
 }
