@@ -109,10 +109,14 @@ public class LocalizationManager {
      * @param key          The translation key
      * @param placeholders Placeholders in the format [key1, value1, key2, value2,
      *                     ...]
-     * @return The formatted message string (parsed with MiniMessage)
+     * @return The formatted message string with MiniMessage tags processed
+     * @deprecated Use getComponent() instead which properly preserves formatting
      */
+    @Deprecated
     public String getFormattedMessage(String key, String... placeholders) {
-        return miniMessage.serialize(getComponent(key, placeholders));
+        // Just get the raw message with placeholders replaced
+        // Don't deserialize and serialize again as it loses the formatting
+        return getMessage(key, placeholders);
     }
 
     /**
