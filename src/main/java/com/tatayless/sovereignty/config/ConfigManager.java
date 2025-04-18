@@ -70,6 +70,67 @@ public class ConfigManager {
         return config.getString("database.sqlite.filename", "sovereignty.db");
     }
 
+    // Nation Settings
+    public int getMaxChunksForPowerLevel(int powerLevel) {
+        switch (powerLevel) {
+            case 1:
+                return config.getInt("power-scaling.chunks.level-1", 10);
+            case 2:
+                return config.getInt("power-scaling.chunks.level-2", 25);
+            case 3:
+                return config.getInt("power-scaling.chunks.level-3", 50);
+            case 4:
+                return config.getInt("power-scaling.chunks.level-4", 80);
+            case 5:
+                return config.getInt("power-scaling.chunks.level-5", 120);
+            case 6:
+                return config.getInt("power-scaling.chunks.level-6", 180);
+            default:
+                return 10;
+        }
+    }
+
+    public int getSoldierLivesForPowerLevel(int powerLevel) {
+        switch (powerLevel) {
+            case 1:
+                return config.getInt("power-scaling.soldier-lives.level-1", 5);
+            case 2:
+                return config.getInt("power-scaling.soldier-lives.level-2", 10);
+            case 3:
+                return config.getInt("power-scaling.soldier-lives.level-3", 20);
+            case 4:
+                return config.getInt("power-scaling.soldier-lives.level-4", 30);
+            case 5:
+                return config.getInt("power-scaling.soldier-lives.level-5", 50);
+            case 6:
+                return config.getInt("power-scaling.soldier-lives.level-6", 75);
+            default:
+                return 5;
+        }
+    }
+
+    // War Settings
+    public boolean isWarDestructionEnabled() {
+        return config.getBoolean("war.enable-destruction", false);
+    }
+
+    public boolean isAssassinationModeEnabled() {
+        return config.getBoolean("war.enable-assassination", false);
+    }
+
+    // Vault Settings
+    public int getNationVaultRows() {
+        return config.getInt("vaults.nation-vault-rows", 3);
+    }
+
+    public int getTradeVaultRows() {
+        return config.getInt("vaults.trade-vault-rows", 3);
+    }
+
+    public int getVaultExpiryTimeMinutes() {
+        return config.getInt("vaults.expired-items-time-minutes", 1440); // Default 24 hours
+    }
+
     public FileConfiguration getConfig() {
         return config;
     }

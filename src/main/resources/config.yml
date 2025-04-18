@@ -1,12 +1,11 @@
 # Sovereignty Configuration
-language: en_US # Default language for the plugin
 
 # Database settings
 database:
-  # Database type: 'mysql' or 'sqlite'
+  # Database type: mysql or sqlite
   type: sqlite
 
-  # MySQL settings (only used if type is 'mysql')
+  # MySQL settings
   mysql:
     host: localhost
     port: 3306
@@ -15,6 +14,59 @@ database:
     password: password
     useSSL: false
 
-  # SQLite settings (only used if type is 'sqlite')
+  # SQLite settings
   sqlite:
     filename: sovereignty.db
+
+# Language settings (available: en_US)
+language: en_US
+
+# Power scaling configuration
+power-scaling:
+  # Maximum claimable chunks per power level
+  chunks:
+    level-1: 10
+    level-2: 25
+    level-3: 50
+    level-4: 80
+    level-5: 120
+    level-6: 180
+
+  # Maximum soldier lives per power level
+  soldier-lives:
+    level-1: 5
+    level-2: 10
+    level-3: 20
+    level-4: 30
+    level-5: 50
+    level-6: 75
+
+  # Growth rates
+  growth:
+    players: 0.1 # +0.1 per 5 players
+    alliance: 0.1 # +0.1 per alliance (max +1.5)
+    trade-success: 0.05 # +0.05 for every 3 consecutive fulfilled trades
+    trade-failure: -0.05 # -0.05 for every 3 failed trades in last 10
+    war-victory: 1.0 # +1 per war victory (once per week)
+
+# War settings
+war:
+  # If true, nations at war can destroy blocks inside opponent's land
+  enable-destruction: false
+
+  # If true, killing the president instantly wins the war
+  enable-assassination: false
+
+  # Minimum time (in hours) between declaring wars
+  cooldown-hours: 24
+
+# Vault settings
+vaults:
+  # Number of rows in nation vaults (1 row = 9 slots)
+  nation-vault-rows: 3
+
+  # Number of rows in trade vaults
+  trade-vault-rows: 3
+
+  # Time in minutes before overflow items expire
+  expired-items-time-minutes: 1440 # 24 hours

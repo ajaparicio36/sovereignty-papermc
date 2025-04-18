@@ -1,6 +1,8 @@
 package com.tatayless.sovereignty.localization;
 
 import com.tatayless.sovereignty.Sovereignty;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -8,141 +10,95 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 public class LocalizationManager {
     private final Sovereignty plugin;
-    private final String defaultLanguage = "en_US";
-    private String currentLanguage;
-    private final Map<String, FileConfiguration> languageFiles = new HashMap<>();
+    private final String language;
+    private final Map<String, FileConfiguration> languageConfigs;
+    private final MiniMessage miniMessage;
 
-    public LocalizationManager(Sovereignty plugin) {
+    public LocalizationManager(Sovereignty plugin, String language) {
         this.plugin = plugin;
-        this.currentLanguage = plugin.getConfig().getString("language", defaultLanguage);
+        this.language = language;
+        this.languageConfigs = new HashMap<>();
+        this.miniMessage = MiniMessage.miniMessage();
+
         loadLanguages();
     }
 
     private void loadLanguages() {
-        // Always load default language
-        loadLanguage(defaultLanguage);
+        // Load default language (en_US)
+        loadLanguage("en_US");
 
-        // Load current language if different from default
-        if (!currentLanguage.equals(defaultLanguage)) {
-            loadLanguage(currentLanguage);
+        // Load selected language if it's not the default
+        if (!language.equals("en_US")) {
+            loadLanguage(language);
         }
     }
 
-    private void loadLanguage(String language) {
-        File languageFile = new File(plugin.getDataFolder(), "languages/" + language + ".yml");
+    private void loadLanguage(String lang) {
+        File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
 
-        if (!languageFile.exists()) {
-            // Create language file from resource
-            try (InputStream in = plugin.getResource("languages/" + language + ".yml")) {
-                if (in != null) {
-                    // Ensure directory exists
-                    languageFile.getParentFile().mkdirs();
-
-                    // Save resource to file
-                    plugin.saveResource("languages/" + language + ".yml", false);
-
-                    // Load configuration from file
-                    languageFiles.put(language, YamlConfiguration.loadConfiguration(languageFile));
-                    plugin.getLogger().info("Loaded language file: " + language + ".yml");
-                } else {
-                    plugin.getLogger().warning("Missing language file: " + language + ".yml");
-
-                    // Create an empty language file
-                    if (language.equals(defaultLanguage)) {
-                        createDefaultLanguageFile(languageFile);
-                    }
-                }
-            } catch (IOException e) {
-                plugin.getLogger().severe("Failed to load language file: " + language + ".yml");
-                e.printStackTrace();
-            }
-        } else {
-            // Load existing language file
-            languageFiles.put(language, YamlConfiguration.loadConfiguration(languageFile));
+        if (!langFile.exists()) {
+            plugin.saveResource("languages/" + lang + ".yml", false);
         }
 
-        // If we still don't have a language file, create a default one for the default
-        // language
-        if (!languageFiles.containsKey(language) && language.equals(defaultLanguage)) {
-            createDefaultLanguageFile(languageFile);
-        }
-    }
-
-    private void createDefaultLanguageFile(File file) {
         try {
-            file.getParentFile().mkdirs();
-
-            FileConfiguration config = new YamlConfiguration();
-
-            // Add default messages
-            config.set("plugin.enabled", "Sovereignty has been enabled!");
-            config.set("plugin.disabled", "Sovereignty has been disabled!");
-            config.set("database.initialized", "Database connection established successfully!");
-            config.set("database.error", "Failed to initialize database. Check your configuration!");
-            config.set("command.no_permission", "You don't have permission to use this command!");
-
-            // Save the configuration
-            config.save(file);
-
-            // Add to loaded languages
-            languageFiles.put(defaultLanguage, config);
-
-            plugin.getLogger().info("Created default language file: " + file.getName());
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to create default language file!");
+            languageConfigs.put(lang, YamlConfiguration.loadConfiguration(langFile));
+            // Also load from jar as fallback
+            InputStream defaultStream = plugin.getResource("languages/" + lang + ".yml");
+            if (defaultStream != null) {
+                YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(defaultStream, StandardCharsets.UTF_8));
+                languageConfigs.get(lang).setDefaults(defaultConfig);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load language file: " + lang + ".yml");
             e.printStackTrace();
         }
     }
 
-    public String getMessage(String key) {
-        return getMessage(key, true);
-    }
-
-    public String getMessage(String key, boolean colorize) {
+    public String getMessage(String key, String... placeholders) {
         String message = null;
 
-        // Try to get message from current language
-        if (languageFiles.containsKey(currentLanguage)) {
-            message = languageFiles.get(currentLanguage).getString(key);
+        // Try to get from selected language
+        if (languageConfigs.containsKey(language)) {
+            message = languageConfigs.get(language).getString(key);
         }
 
-        // Fall back to default language if message not found
-        if (message == null && languageFiles.containsKey(defaultLanguage)) {
-            message = languageFiles.get(defaultLanguage).getString(key);
+        // Fallback to default language
+        if (message == null && languageConfigs.containsKey("en_US")) {
+            message = languageConfigs.get("en_US").getString(key);
         }
 
-        // Use a default message if still not found
+        // Final fallback
         if (message == null) {
-            message = "Missing message key: " + key;
+            return "Missing translation key: " + key;
         }
 
-        // Apply color codes if requested
-        if (colorize) {
-            message = LegacyComponentSerializer.legacyAmpersand().serialize(
-                    LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+        // Replace placeholders
+        if (placeholders != null && placeholders.length > 0) {
+            for (int i = 0; i < placeholders.length; i += 2) {
+                if (i + 1 < placeholders.length) {
+                    message = message.replace("{" + placeholders[i] + "}", placeholders[i + 1]);
+                }
+            }
         }
 
         return message;
     }
 
-    public String getCurrentLanguage() {
-        return currentLanguage;
+    public Component getComponent(String key, String... placeholders) {
+        String message = getMessage(key, placeholders);
+        return miniMessage.deserialize(message);
     }
 
-    public void setCurrentLanguage(String language) {
-        if (!languageFiles.containsKey(language)) {
-            loadLanguage(language);
-        }
-
-        if (languageFiles.containsKey(language)) {
-            currentLanguage = language;
-            plugin.getConfig().set("language", language);
-            plugin.saveConfig();
-        }
+    public void reloadLanguages() {
+        languageConfigs.clear();
+        loadLanguages();
     }
 }

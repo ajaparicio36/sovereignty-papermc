@@ -1,22 +1,83 @@
-# English language file for Sovereignty plugin
+# English (US) language file for Sovereignty
 
-plugin:
-  enabled: "&aSovereignty has been enabled!"
-  disabled: "&cSovereignty has been disabled."
-  reload: "&aSovereignty configuration has been reloaded."
+# General messages
+general:
+  plugin-enabled: "<green>Sovereignty has been enabled!"
+  plugin-disabled: "<red>Sovereignty has been disabled!"
+  no-permission: "<red>You don't have permission to use this command."
+  player-only: "<red>This command can only be used by players."
+  command-usage: "<red>Usage: {usage}"
+  not-in-nation: "<red>You are not in a nation!"
+  target-not-in-nation: "<red>{player} is not in a nation!"
 
-database:
-  initialized: "&aDatabase connection established successfully!"
-  error: "&cFailed to initialize database. Check your configuration!"
-
-command:
-  no_permission: "&cYou don't have permission to use this command!"
-  unknown: "&cUnknown command. Use /sovereignty help for a list of commands."
-  help_header: "&6=== &eSovereignty Help &6==="
-  help_footer: "&6==========================="
-
+# Nation messages
 nation:
-  created: "&aYou have created a new nation: &e%s"
-  join: "&aYou have joined the nation: &e%s"
-  leave: "&cYou have left your nation."
-  not_member: "&cYou are not a member of any nation."
+  created: "<green>Nation {name} has been created!"
+  disbanded: "<red>Nation {name} has been disbanded!"
+  joined: "<green>You have joined the nation {name}!"
+  left: "<red>You have left the nation {name}!"
+  not-enough-power: "<red>Your nation doesn't have enough power to do this!"
+  power-gained: "<green>Your nation gained {amount} power!"
+  power-lost: "<red>Your nation lost {amount} power!"
+  power-level-up: "<green>Your nation has reached power level {level}!"
+
+  # Roles
+  role-assigned: "<green>{player} has been assigned the role of {role}!"
+  role-removed: "<red>{player}'s role of {role} has been removed!"
+  not-president: "<red>Only the president can do this!"
+  not-senator: "<red>Only senators can do this!"
+  not-soldier: "<red>Only soldiers can do this!"
+  president-title: "<gold>President"
+  senator-title: "<yellow>Senator"
+  soldier-title: "<gray>Soldier"
+  citizen-title: "<white>Citizen"
+
+# Chunk messages
+chunk:
+  claimed: "<green>Chunk claimed for nation {name}!"
+  unclaimed: "<red>Chunk unclaimed!"
+  cannot-claim: "<red>You cannot claim this chunk!"
+  max-chunks-reached: "<red>Your nation has reached the maximum number of chunks for your power level!"
+  entered: "<gray>You have entered the territory of {name}!"
+  exited: "<gray>You have exited the territory of {name}!"
+
+# War messages
+war:
+  declared: "<red>War has been declared on {nation}!"
+  received: "<red>{nation} has declared war on your nation!"
+  ended: "<green>The war between {attacker} and {defender} has ended!"
+  victory: "<green>Your nation has won the war against {nation}!"
+  defeat: "<red>Your nation has lost the war against {nation}!"
+  cancelled: "<yellow>The war between {attacker} and {defender} has been cancelled by an admin."
+  soldier-killed: "<gray>{player} has been killed in the war! ({current}/{max} lives left)"
+  president-assassinated: "<red>The president of {nation} has been assassinated! The war is over!"
+
+# Alliance messages
+alliance:
+  proposed: "<green>An alliance has been proposed to {nation}!"
+  received: "<green>{nation} has proposed an alliance with your nation!"
+  accepted: "<green>The alliance with {nation} has been accepted!"
+  declined: "<red>The alliance with {nation} has been declined."
+  broken: "<red>The alliance with {nation} has been broken!"
+
+# Trade messages
+trade:
+  proposed: "<green>A trade has been proposed to {nation}!"
+  received: "<green>{nation} has proposed a trade with your nation!"
+  accepted: "<green>The trade with {nation} has been accepted!"
+  declined: "<red>The trade with {nation} has been declined."
+  completed: "<green>The trade with {nation} has been completed!"
+  failed: "<red>The trade with {nation} has failed due to missing items!"
+  cancelled: "<red>The trade with {nation} has been cancelled due to war!"
+  items-deposited: "<green>Items deposited in trade vault!"
+  items-withdrawn: "<green>Items withdrawn from nation vault!"
+  overflow-warning: "<yellow>Some items were placed in overflow storage and will expire in {time}!"
+  items-expired: "<red>Some items in your nation vault have expired and been deleted!"
+
+# Vault messages
+vault:
+  opened: "<green>Opening vault for nation {name}!"
+  npc-created: "<green>Vault NPC created at your location!"
+  trade-npc-created: "<green>Trade Vault NPC created at your location!"
+  npc-removed: "<red>Vault NPC removed!"
+  npc-accessed: "<gray>Accessing vault for nation {name}!"
