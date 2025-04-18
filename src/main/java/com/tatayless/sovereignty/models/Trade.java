@@ -4,7 +4,11 @@ import java.util.Date;
 
 public class Trade {
     public enum Status {
-        PENDING, COMPLETED, FAILED, CANCELLED
+        ACTIVE, // Trade is active and recurring
+        PENDING, // Trade has been created but not activated yet
+        COMPLETED, // Trade has been completed (for non-recurring trades)
+        FAILED, // Trade has failed
+        CANCELLED // Trade has been cancelled
     }
 
     private String id;
@@ -84,11 +88,11 @@ public class Trade {
         if (this.status != Status.PENDING) {
             return false;
         }
-        
+
         if (nextExecution == null) {
             return false;
         }
-        
+
         return new Date().after(nextExecution);
     }
 }

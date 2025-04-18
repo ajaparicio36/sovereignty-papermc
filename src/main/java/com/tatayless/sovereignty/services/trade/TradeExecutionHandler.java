@@ -88,6 +88,11 @@ public class TradeExecutionHandler {
 
                 // Update trade status
                 if (tradeSuccess[0]) {
+                    // Set trade to ACTIVE if it was PENDING
+                    if (trade.getStatus() == Trade.Status.PENDING) {
+                        trade.setStatus(Trade.Status.ACTIVE);
+                    }
+
                     // Increment consecutive trades
                     trade.incrementConsecutiveTrades();
                     trade.setLastExecution(new Date());
@@ -123,6 +128,7 @@ public class TradeExecutionHandler {
                     context.update(DSL.table("trades"))
                             .set(DSL.field("consecutive_trades"), trade.getConsecutiveTrades())
                             .set(DSL.field("last_execution"), new Timestamp(trade.getLastExecution().getTime()))
+                            .set(DSL.field("status"), trade.getStatus().toString().toLowerCase())
                             .where(DSL.field("id").eq(trade.getId()))
                             .execute();
 

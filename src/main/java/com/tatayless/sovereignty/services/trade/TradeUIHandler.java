@@ -58,7 +58,7 @@ public class TradeUIHandler {
     public void openTradeDeleteMenu(Player player, String nationId) {
         List<Trade> nationTrades = tradeService.getActiveTrades().values().stream()
                 .filter(t -> t.getSendingNationId().equals(nationId) || t.getReceivingNationId().equals(nationId))
-                .filter(t -> t.getStatus() == Trade.Status.PENDING)
+                .filter(t -> t.getStatus() == Trade.Status.PENDING || t.getStatus() == Trade.Status.ACTIVE)
                 .collect(Collectors.toList());
 
         if (nationTrades.isEmpty()) {
@@ -278,8 +278,26 @@ public class TradeUIHandler {
                 .color(net.kyori.adventure.text.format.NamedTextColor.GOLD));
 
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+        net.kyori.adventure.text.format.TextColor statusColor;
+        switch (trade.getStatus()) {
+            case ACTIVE:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.GREEN;
+                break;
+            case PENDING:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.YELLOW;
+                break;
+            case CANCELLED:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.RED;
+                break;
+            case COMPLETED:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.AQUA;
+                break;
+            default:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.GRAY;
+        }
+
         lore.add(net.kyori.adventure.text.Component.text("Status: " + trade.getStatus().toString())
-                .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
+                .color(statusColor));
         lore.add(net.kyori.adventure.text.Component.text("Consecutive: " + trade.getConsecutiveTrades())
                 .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
 

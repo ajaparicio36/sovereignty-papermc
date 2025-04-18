@@ -38,7 +38,7 @@ public class TradeNPCHandler {
         // Get trades where this nation is involved
         List<Trade> nationTrades = tradeService.getActiveTrades().values().stream()
                 .filter(t -> t.getSendingNationId().equals(nationId) || t.getReceivingNationId().equals(nationId))
-                .filter(t -> t.getStatus() == Trade.Status.PENDING)
+                .filter(t -> t.getStatus() == Trade.Status.PENDING || t.getStatus() == Trade.Status.ACTIVE)
                 .collect(Collectors.toList());
 
         if (nationTrades.isEmpty()) {
