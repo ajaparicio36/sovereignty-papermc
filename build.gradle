@@ -1,11 +1,12 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '8.3.0'
     id 'nu.studer.jooq' version '8.2' // Add jOOQ plugin
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.16"
 }
 
 group = 'com.tatayless.sovereignty'
-version = '0.1-SNAPSHOT'
+version = '0.4-BETA'
 description = 'Sovereignty, build your nations and prosper in the world of Minecraft!'
 
 repositories {
@@ -22,6 +23,7 @@ repositories {
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT'
+    paperweight.paperDevBundle("1.21.5-R0.1-SNAPSHOT")
     
     // Database drivers
     implementation 'com.mysql:mysql-connector-j:8.0.33' // MySQL driver
@@ -33,7 +35,7 @@ dependencies {
     implementation 'org.jooq:jooq-codegen:3.18.6'
     
     // Connection pooling
-    implementation 'com.zaxxer:HikariCP:5.0.1'
+    implementation 'com.zaxxer:HikariCP:6.3.0'
     
     // SLF4J implementation for logging
     implementation 'org.slf4j:slf4j-api:2.0.9'
@@ -42,6 +44,40 @@ dependencies {
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+}
+
+// Shadow JAR configuration to include all dependencies
+shadowJar {
+    // Configure the base name of the output jar
+    archiveBaseName.set(project.name)
+    archiveClassifier.set('')
+    archiveVersion.set(project.version.toString())
+    
+    // Include all runtime dependencies
+    configurations = [project.configurations.runtimeClasspath]
+    
+    // Relocate packages to avoid conflicts with other plugins
+    relocate 'com.zaxxer.hikari', 'com.tatayless.sovereignty.lib.hikari'
+    relocate 'org.jooq', 'com.tatayless.sovereignty.lib.jooq'
+    relocate 'org.slf4j', 'com.tatayless.sovereignty.lib.slf4j'
+    
+    minimize() // Removes unused classes from dependencies
+}
+
+// Fix the dependency issue by making reobfJar depend on jar
+tasks.named('reobfJar').configure {
+    dependsOn(tasks.named('jar'))
+}
+
+// Set the shadowJar as the default artifact
+tasks.named('assemble').configure {
+    dependsOn(tasks.reobfJar)
+    dependsOn tasks.named('shadowJar')
+}
+
+// Make shadowJar the default jar task
+tasks.named('build').configure {
+    dependsOn tasks.named('shadowJar')
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -58,15 +94,4 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
-}
-
-// Don't forget to include dependencies in your JAR
-shadowJar {
-    archiveClassifier.set('')
-    minimize() // Remove unused classes
-}
-
-// Set the default build task to create the fat JAR
-build {
-    dependsOn shadowJar
 }
