@@ -34,7 +34,6 @@ public class Sovereignty extends JavaPlugin {
             databaseManager.initialize();
         } catch (SQLException e) {
             getLogger().severe("Failed to initialize database: " + e.getMessage());
-            e.printStackTrace();
             getServer().getPluginManager().disablePlugin(this);
             return;
         }

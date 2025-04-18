@@ -1,7 +1,6 @@
 package com.tatayless.sovereignty.database;
 
 import com.tatayless.sovereignty.Sovereignty;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.jooq.DSLContext;
 
 import java.sql.Connection;
@@ -19,29 +18,31 @@ public class TableManager {
     public CompletableFuture<Void> createTables(DSLContext context) {
         CompletableFuture<Void> future = new CompletableFuture<>();
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                // Don't use the passed context which might have a closed connection
-                try (Connection connection = plugin.getDatabaseManager().getConnection()) {
-                    DSLContext newContext = org.jooq.impl.DSL.using(
-                            connection,
-                            plugin.getDatabaseManager().getSqlDialect());
+        // Execute on a separate thread to avoid blocking the main server thread
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            plugin.getLogger().info("Creating tables asynchronously...");
+            // Don't use the passed context which might have a closed connection
+            try (Connection connection = plugin.getDatabaseManager().getConnection()) {
+                plugin.getLogger().info("Got a fresh connection for table creation");
+                DSLContext newContext = org.jooq.impl.DSL.using(
+                        connection,
+                        plugin.getDatabaseManager().getSqlDialect());
 
-                    if (isMySQL) {
-                        createMySQLTables(newContext);
-                    } else {
-                        createSQLiteTables(newContext);
-                    }
-                    plugin.getLogger().info("Database tables have been initialized");
-                    future.complete(null);
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
-                    e.printStackTrace(); // Add stack trace for better debugging
-                    future.completeExceptionally(e);
+                if (isMySQL) {
+                    plugin.getLogger().info("Creating MySQL tables...");
+                    createMySQLTables(newContext);
+                } else {
+                    plugin.getLogger().info("Creating SQLite tables...");
+                    createSQLiteTables(newContext);
                 }
+                plugin.getLogger().info("Database tables have been initialized successfully");
+                future.complete(null);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
+                e.printStackTrace(); // Add stack trace for better debugging
+                future.completeExceptionally(e);
             }
-        }.runTaskAsynchronously(plugin);
+        });
 
         return future;
     }

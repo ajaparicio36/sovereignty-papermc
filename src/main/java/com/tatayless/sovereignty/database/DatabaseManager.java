@@ -86,11 +86,20 @@ public class DatabaseManager {
     }
 
     private void createTablesIfNotExist() throws SQLException {
+        plugin.getLogger().info("Starting to create tables if they don't exist...");
         try (Connection conn = getConnection()) {
+            plugin.getLogger().info("Got connection, creating context...");
             DSLContext context = DSL.using(conn, sqlDialect);
-            tableManager.createTables(context).join(); // Wait for table creation to complete
+            plugin.getLogger().info("Calling tableManager.createTables...");
+            // Don't use join() here as it blocks the current thread
+            tableManager.createTables(context).exceptionally(ex -> {
+                plugin.getLogger().severe("Error in table creation: " + ex.getMessage());
+                ex.printStackTrace();
+                return null;
+            });
+            plugin.getLogger().info("Table creation has been scheduled asynchronously");
         } catch (Exception e) {
-            plugin.getLogger().severe("Error creating tables: " + e.getMessage());
+            plugin.getLogger().severe("Error setting up tables: " + e.getMessage());
             e.printStackTrace();
             throw new SQLException("Failed to create database tables", e);
         }
