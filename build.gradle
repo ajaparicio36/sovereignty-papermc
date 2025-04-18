@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.tatayless.sovereignty'
-version = '0.3-BETA'
+version = '0.4-BETA'
 description = 'Sovereignty, build your nations and prosper in the world of Minecraft!'
 
 repositories {

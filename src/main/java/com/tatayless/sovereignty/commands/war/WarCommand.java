@@ -98,6 +98,12 @@ public class WarCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Prevent declaring war on your own nation
+        if (targetNation.getId().equals(playerNation.getId())) {
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.cannot-declare-on-self"));
+            return true;
+        }
+
         // Check if already at war
         if (warService.isAtWar(playerNation.getId(), targetNation.getId())) {
             player.sendMessage(plugin.getLocalizationManager().getComponent("war.already-at-war"));

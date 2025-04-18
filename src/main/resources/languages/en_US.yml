@@ -129,6 +129,7 @@ war:
   war-details-attacker-kills: "<white>Attacker Kills: <green>{kills}</green>"
   war-details-defender-kills: "<white>Defender Kills: <red>{kills}</red>"
   war-details-required-kills: "<white>Kills Required: <gold>{kills}</gold>"
+  cannot-declare-on-self: "<red>You cannot declare war on your own nation."
   cancel-usage: "<red>Usage: /war cancel <id or nation1 nation2>"
   cancel-failed: "<red>Failed to cancel war. Make sure the war exists and is active."
   help-header: "<gold>--- War Commands ---</gold>"
