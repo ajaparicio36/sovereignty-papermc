@@ -1,7 +1,6 @@
 package com.tatayless.sovereignty.commands.nation;
 
 import com.tatayless.sovereignty.Sovereignty;
-import com.tatayless.sovereignty.models.Nation;
 import org.bukkit.entity.Player;
 
 import java.util.Collections;

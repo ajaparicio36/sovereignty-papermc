@@ -5,13 +5,9 @@ import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import com.tatayless.sovereignty.services.NationService;
 import com.tatayless.sovereignty.services.PlayerService;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class InfoCommand implements NationCommandExecutor.SubCommand {

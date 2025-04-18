@@ -1,8 +1,6 @@
 package com.tatayless.sovereignty.commands.nation;
 
 import com.tatayless.sovereignty.Sovereignty;
-import com.tatayless.sovereignty.models.Nation;
-import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import com.tatayless.sovereignty.services.NationService;
 import com.tatayless.sovereignty.services.PlayerService;
 import org.bukkit.command.Command;
@@ -16,7 +14,9 @@ import java.util.stream.Collectors;
 
 public class NationCommandExecutor implements CommandExecutor, TabCompleter {
     private final Sovereignty plugin;
+    @SuppressWarnings("unused")
     private final NationService nationService;
+    @SuppressWarnings("unused")
     private final PlayerService playerService;
     private final Map<String, SubCommand> subCommands = new HashMap<>();
 
