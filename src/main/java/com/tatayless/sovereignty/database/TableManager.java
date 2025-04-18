@@ -47,6 +47,9 @@ public class TableManager {
                 "power INT NOT NULL DEFAULT 0, " +
                 "claimed_chunks JSON, " +
                 "alliances JSON, " +
+                "president_id VARCHAR(36), " + // Store president reference directly
+                "senators JSON, " + // Store senators as JSON array of player IDs
+                "citizens JSON, " + // Added citizens as JSON array of player IDs
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
                 ")");
@@ -56,31 +59,10 @@ public class TableManager {
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "name VARCHAR(36) NOT NULL UNIQUE, " +
                 "nation_id VARCHAR(36), " +
+                "role VARCHAR(20), " + // Add role field (e.g., 'president', 'senator', 'citizen')
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE SET NULL" +
-                ")");
-
-        // President table - one president per nation
-        context.execute("CREATE TABLE IF NOT EXISTS presidents (" +
-                "id VARCHAR(36) PRIMARY KEY, " +
-                "player_id VARCHAR(36) NOT NULL UNIQUE, " +
-                "nation_id VARCHAR(36) UNIQUE, " +
-                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                "FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE SET NULL" +
-                ")");
-
-        // Senators table - multiple senators per nation
-        context.execute("CREATE TABLE IF NOT EXISTS senators (" +
-                "id VARCHAR(36) PRIMARY KEY, " +
-                "player_id VARCHAR(36) NOT NULL UNIQUE, " +
-                "nation_id VARCHAR(36) NOT NULL, " +
-                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                "FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
         // Nation Vault table
@@ -107,7 +89,7 @@ public class TableManager {
                 "FOREIGN KEY (receiving_nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trade Vaults table (temporary storage during trade processing)
+        // Trade Vaults table
         context.execute("CREATE TABLE IF NOT EXISTS trade_vaults (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "trade_id VARCHAR(36) NOT NULL UNIQUE, " +
@@ -153,6 +135,9 @@ public class TableManager {
                 "power INTEGER NOT NULL DEFAULT 0, " +
                 "claimed_chunks TEXT, " + // JSON array stored as TEXT in SQLite
                 "alliances TEXT, " + // JSON array stored as TEXT in SQLite
+                "president_id TEXT, " + // Store president reference directly
+                "senators TEXT, " + // Store senators as JSON array of player IDs
+                "citizens TEXT, " + // Added citizens as JSON array of player IDs
                 "created_at TEXT DEFAULT (datetime('now')), " +
                 "updated_at TEXT DEFAULT (datetime('now'))" +
                 ")");
@@ -162,31 +147,10 @@ public class TableManager {
                 "id TEXT PRIMARY KEY, " +
                 "name TEXT NOT NULL UNIQUE, " +
                 "nation_id TEXT, " +
+                "role TEXT, " + // Add role field (e.g., 'president', 'senator', 'citizen')
                 "created_at TEXT DEFAULT (datetime('now')), " +
                 "updated_at TEXT DEFAULT (datetime('now')), " +
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE SET NULL" +
-                ")");
-
-        // President table
-        context.execute("CREATE TABLE IF NOT EXISTS presidents (" +
-                "id TEXT PRIMARY KEY, " +
-                "player_id TEXT NOT NULL UNIQUE, " +
-                "nation_id TEXT UNIQUE, " +
-                "created_at TEXT DEFAULT (datetime('now')), " +
-                "updated_at TEXT DEFAULT (datetime('now')), " +
-                "FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE SET NULL" +
-                ")");
-
-        // Senators table
-        context.execute("CREATE TABLE IF NOT EXISTS senators (" +
-                "id TEXT PRIMARY KEY, " +
-                "player_id TEXT NOT NULL UNIQUE, " +
-                "nation_id TEXT NOT NULL, " +
-                "created_at TEXT DEFAULT (datetime('now')), " +
-                "updated_at TEXT DEFAULT (datetime('now')), " +
-                "FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, " +
-                "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
         // Nation Vault table
@@ -220,7 +184,7 @@ public class TableManager {
                 "FOREIGN KEY (receiving_nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trade Vaults table (temporary storage during trade processing)
+        // Trade Vaults table
         context.execute("CREATE TABLE IF NOT EXISTS trade_vaults (" +
                 "id TEXT PRIMARY KEY, " +
                 "trade_id TEXT NOT NULL UNIQUE, " +
@@ -258,7 +222,7 @@ public class TableManager {
                 ")");
 
         // Create triggers for all tables to handle updated_at
-        String[] tables = { "players", "presidents", "senators", "nation_vaults", "trades", "trade_vaults",
+        String[] tables = { "players", "nation_vaults", "trades", "trade_vaults",
                 "vault_npcs", "trade_vault_npcs" };
         for (String table : tables) {
             context.execute("CREATE TRIGGER IF NOT EXISTS update_" + table + "_timestamp " +
