@@ -31,37 +31,37 @@ public class DisbandCommand implements NationCommandExecutor.SubCommand {
         SovereigntyPlayer sovereigntyPlayer = plugin.getServiceManager().getPlayerService().getPlayer(playerId);
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         // Check if player is president
         if (!nation.getPresidentId().equals(playerId)) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-president"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-president"));
             return true;
         }
 
         // Add confirmation
         if (args.length == 0 || !args[0].equalsIgnoreCase("confirm")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.confirm-disband"));
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.confirm-disband-command"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.confirm-disband"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.confirm-disband-command"));
             return true;
         }
 
         // Disband the nation
         plugin.getServiceManager().getNationService().disbandNation(nation.getId(), playerId).thenAccept(success -> {
             if (success) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "nation.disbanded",
                         "name", nation.getName()));
             } else {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.disband-failed"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.disband-failed"));
             }
         });
 

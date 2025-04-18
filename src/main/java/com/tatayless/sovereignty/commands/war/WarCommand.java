@@ -34,7 +34,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getLocalizationManager().getMessage("general.player-only"));
+            sender.sendMessage(plugin.getLocalizationManager().getComponent("general.player-only"));
             return true;
         }
 
@@ -65,7 +65,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleDeclareWar(Player player, String playerId, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.declare-usage"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.declare-usage"));
             return true;
         }
 
@@ -73,20 +73,20 @@ public class WarCommand implements CommandExecutor, TabCompleter {
         SovereigntyPlayer sovereigntyPlayer = playerService.getPlayer(playerId);
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("general.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("general.not-in-nation"));
             return true;
         }
 
         Nation playerNation = nationService.getNation(sovereigntyPlayer.getNationId());
 
         if (playerNation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("general.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("general.not-in-nation"));
             return true;
         }
 
         // Only president can declare war
         if (!playerNation.getPresidentId().equals(playerId)) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-president"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-president"));
             return true;
         }
 
@@ -94,13 +94,13 @@ public class WarCommand implements CommandExecutor, TabCompleter {
         Nation targetNation = nationService.getNationByName(targetNationName);
         if (targetNation == null) {
             player.sendMessage(
-                    plugin.getLocalizationManager().getMessage("war.nation-not-found", "nation", targetNationName));
+                    plugin.getLocalizationManager().getComponent("war.nation-not-found", "nation", targetNationName));
             return true;
         }
 
         // Check if already at war
         if (warService.isAtWar(playerNation.getId(), targetNation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.already-at-war"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.already-at-war"));
             return true;
         }
 
@@ -109,7 +109,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
             if (war != null) {
                 // Success message handled by war service
             } else {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("war.declare-failed"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("war.declare-failed"));
             }
         });
 
@@ -122,22 +122,22 @@ public class WarCommand implements CommandExecutor, TabCompleter {
         if (args.length > 1 && args[1].equalsIgnoreCase("all") && player.hasPermission("sovereignty.admin.wars")) {
             // Admin viewing all wars
             wars = warService.getActiveWars();
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.all-active-wars-header"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.all-active-wars-header"));
         } else {
             // Player viewing their nation's wars
             SovereigntyPlayer sovereigntyPlayer = playerService.getPlayer(playerId);
 
             if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("general.not-in-nation"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("general.not-in-nation"));
                 return true;
             }
 
             wars = warService.getNationWars(sovereigntyPlayer.getNationId());
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.your-nation-wars-header"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.your-nation-wars-header"));
         }
 
         if (wars.isEmpty()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.no-active-wars"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.no-active-wars"));
             return true;
         }
 
@@ -146,7 +146,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
             Nation defender = nationService.getNation(war.getDefenderNationId());
 
             if (attacker != null && defender != null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-status-format",
+                player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-status-format",
                         "attacker", attacker.getName(),
                         "defender", defender.getName(),
                         "attackerKills", String.valueOf(war.getAttackerKills()),
@@ -160,7 +160,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleWarInfo(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.info-usage"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.info-usage"));
             return true;
         }
 
@@ -171,7 +171,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
         if (nation1 == null) {
             player.sendMessage(
-                    plugin.getLocalizationManager().getMessage("war.nation-not-found", "nation", nation1Name));
+                    plugin.getLocalizationManager().getComponent("war.nation-not-found", "nation", nation1Name));
             return true;
         }
 
@@ -181,11 +181,12 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
             if (wars.isEmpty()) {
                 player.sendMessage(
-                        plugin.getLocalizationManager().getMessage("war.nation-no-wars", "nation", nation1.getName()));
+                        plugin.getLocalizationManager().getComponent("war.nation-no-wars", "nation",
+                                nation1.getName()));
                 return true;
             }
 
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.wars-involving-header", "nation",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.wars-involving-header", "nation",
                     nation1.getName()));
 
             for (WarService.War war : wars) {
@@ -193,7 +194,7 @@ public class WarCommand implements CommandExecutor, TabCompleter {
                 Nation defender = nationService.getNation(war.getDefenderNationId());
 
                 if (attacker != null && defender != null) {
-                    player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-status-format",
+                    player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-status-format",
                             "attacker", attacker.getName(),
                             "defender", defender.getName(),
                             "attackerKills", String.valueOf(war.getAttackerKills()),
@@ -207,14 +208,14 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
             if (nation2 == null) {
                 player.sendMessage(
-                        plugin.getLocalizationManager().getMessage("war.nation-not-found", "nation", nation2Name));
+                        plugin.getLocalizationManager().getComponent("war.nation-not-found", "nation", nation2Name));
                 return true;
             }
 
             WarService.War war = warService.getWarBetweenNations(nation1.getId(), nation2.getId());
 
             if (war == null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("war.no-war-between-nations",
+                player.sendMessage(plugin.getLocalizationManager().getComponent("war.no-war-between-nations",
                         "nation1", nation1.getName(),
                         "nation2", nation2.getName()));
                 return true;
@@ -223,16 +224,16 @@ public class WarCommand implements CommandExecutor, TabCompleter {
             Nation attacker = nationService.getNation(war.getAttackerNationId());
             Nation defender = nationService.getNation(war.getDefenderNationId());
 
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-details-header"));
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-details-attacker", "nation",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-details-header"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-details-attacker", "nation",
                     attacker.getName()));
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-details-defender", "nation",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-details-defender", "nation",
                     defender.getName()));
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-details-attacker-kills", "kills",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-details-attacker-kills", "kills",
                     String.valueOf(war.getAttackerKills())));
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-details-defender-kills", "kills",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-details-defender-kills", "kills",
                     String.valueOf(war.getDefenderKills())));
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.war-details-required-kills", "kills",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.war-details-required-kills", "kills",
                     String.valueOf(war.getRequiredKills())));
         }
 
@@ -241,13 +242,13 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleCancelWar(Player player, String playerId, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.cancel-usage"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.cancel-usage"));
             return true;
         }
 
         // Check if player has admin permission
         if (!player.hasPermission("sovereignty.admin.wars")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("general.no-permission"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("general.no-permission"));
             return true;
         }
 
@@ -267,20 +268,20 @@ public class WarCommand implements CommandExecutor, TabCompleter {
 
             if (nation1 == null) {
                 player.sendMessage(
-                        plugin.getLocalizationManager().getMessage("war.nation-not-found", "nation", nation1Name));
+                        plugin.getLocalizationManager().getComponent("war.nation-not-found", "nation", nation1Name));
                 return true;
             }
 
             if (nation2 == null) {
                 player.sendMessage(
-                        plugin.getLocalizationManager().getMessage("war.nation-not-found", "nation", nation2Name));
+                        plugin.getLocalizationManager().getComponent("war.nation-not-found", "nation", nation2Name));
                 return true;
             }
 
             WarService.War war = warService.getWarBetweenNations(nation1.getId(), nation2.getId());
 
             if (war == null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("war.no-war-between-nations",
+                player.sendMessage(plugin.getLocalizationManager().getComponent("war.no-war-between-nations",
                         "nation1", nation1.getName(),
                         "nation2", nation2.getName()));
                 return true;
@@ -294,9 +295,9 @@ public class WarCommand implements CommandExecutor, TabCompleter {
         // Cancel the war
         warService.cancelWar(finalWarId).thenAccept(success -> {
             if (success) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("war.cancelled"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("war.cancelled"));
             } else {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("war.cancel-failed"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("war.cancel-failed"));
             }
         });
 
@@ -304,13 +305,13 @@ public class WarCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(plugin.getLocalizationManager().getMessage("war.help-header"));
-        player.sendMessage(plugin.getLocalizationManager().getMessage("war.help-declare"));
-        player.sendMessage(plugin.getLocalizationManager().getMessage("war.help-list"));
-        player.sendMessage(plugin.getLocalizationManager().getMessage("war.help-info"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("war.help-header"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("war.help-declare"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("war.help-list"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("war.help-info"));
 
         if (player.hasPermission("sovereignty.admin.wars")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("war.help-cancel"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("war.help-cancel"));
         }
     }
 

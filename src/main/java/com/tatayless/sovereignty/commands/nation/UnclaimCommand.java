@@ -36,19 +36,19 @@ public class UnclaimCommand implements NationCommandExecutor.SubCommand {
         SovereigntyPlayer sovereigntyPlayer = plugin.getServiceManager().getPlayerService().getPlayer(playerId);
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         // Check if player is an officer (president or senator)
         if (!nation.isOfficer(playerId) && !player.hasPermission("sovereignty.admin.bypass")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return true;
         }
 
@@ -56,9 +56,9 @@ public class UnclaimCommand implements NationCommandExecutor.SubCommand {
         if (args.length > 0 && args[0].equalsIgnoreCase("toggle")) {
             boolean isActive = toggleManager.toggleAutoUnclaim(player);
             if (isActive) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.enabled"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("auto-unclaim.enabled"));
             } else {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.disabled"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("auto-unclaim.disabled"));
             }
             return true;
         }

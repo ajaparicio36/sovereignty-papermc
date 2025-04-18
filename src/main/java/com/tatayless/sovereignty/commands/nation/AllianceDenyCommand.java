@@ -33,18 +33,18 @@ public class AllianceDenyCommand implements NationCommandExecutor.SubCommand {
                 .getPlayer(player.getUniqueId().toString());
 
         if (sovereigntyPlayer == null || sovereigntyPlayer.getNationId() == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (!nation.isOfficer(player.getUniqueId().toString())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return true;
         }
 
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.deny-usage",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.deny-usage",
                     "Usage: /nation alliance deny <nation>"));
             return true;
         }
@@ -53,7 +53,7 @@ public class AllianceDenyCommand implements NationCommandExecutor.SubCommand {
         Nation senderNation = plugin.getServiceManager().getNationService().getNationByName(senderNationName);
 
         if (senderNation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-found"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-found"));
             return true;
         }
 
@@ -61,7 +61,7 @@ public class AllianceDenyCommand implements NationCommandExecutor.SubCommand {
                 .getAllianceRequests(nation.getId());
 
         if (!requests.contains(senderNation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.no-request-found",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.no-request-found",
                     "No alliance request found from this nation"));
             return true;
         }
@@ -70,10 +70,10 @@ public class AllianceDenyCommand implements NationCommandExecutor.SubCommand {
                 .denyAlliance(nation.getId(), senderNation.getId(), player.getUniqueId().toString())
                 .thenAccept(success -> {
                     if (success) {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.request-denied",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.request-denied",
                                 "nation", senderNationName));
                     } else {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.deny-failed",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.deny-failed",
                                 "Failed to deny alliance request"));
                     }
                 });

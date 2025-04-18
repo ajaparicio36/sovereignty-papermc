@@ -28,7 +28,7 @@ public class CreateCommand implements NationCommandExecutor.SubCommand {
     @Override
     public boolean execute(Player player, String[] args) {
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "general.invalid-args",
                     "usage", "/nation create <name>"));
             return false;
@@ -45,18 +45,18 @@ public class CreateCommand implements NationCommandExecutor.SubCommand {
 
         // Check if player is already in a nation
         if (plugin.getServiceManager().getPlayerService().getPlayer(player.getUniqueId().toString()).hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.already-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.already-in-nation"));
             return true;
         }
 
         // Create nation
         plugin.getServiceManager().getNationService().createNation(nationName, player).thenAccept(nation -> {
             if (nation != null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "nation.created",
                         "name", nation.getName()));
             } else {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.already-exists"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.already-exists"));
             }
         });
 

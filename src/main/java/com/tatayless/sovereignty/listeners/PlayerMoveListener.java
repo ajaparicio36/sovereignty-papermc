@@ -88,12 +88,12 @@ public class PlayerMoveListener implements Listener {
         if (currentChunkOwner != previousChunkOwner) {
             if (currentChunkOwner != null) {
                 // Entering a nation's territory
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "chunk.entered",
                         "name", currentChunkOwner.getName()));
             } else if (previousChunkOwner != null) {
                 // Exiting a nation's territory
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "chunk.exited",
                         "name", previousChunkOwner.getName()));
             }
@@ -106,28 +106,28 @@ public class PlayerMoveListener implements Listener {
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-claim.not-in-nation"));
             return;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-claim.not-in-nation"));
             return;
         }
 
         // Check if player is an officer
         if (!nation.isOfficer(playerId) && !player.hasPermission("sovereignty.admin.bypass")) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-claim.not-officer"));
             return;
         }
 
         // Check if we've reached the max claims
         if (toggleManager.hasReachedMaxClaims(player)) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.max-reached",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-claim.max-reached",
                     "max", String.valueOf(toggleManager.getMaxAutoClaims())));
             return;
         }
@@ -136,7 +136,7 @@ public class PlayerMoveListener implements Listener {
         plugin.getServiceManager().getChunkService().claimChunk(player, chunk).thenAccept(success -> {
             if (success) {
                 int claimed = toggleManager.incrementChunksClaimed(player);
-                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.chunk-claimed",
+                player.sendMessage(plugin.getLocalizationManager().getComponent("auto-claim.chunk-claimed",
                         "current", String.valueOf(claimed),
                         "max", String.valueOf(toggleManager.getMaxAutoClaims())));
             }
@@ -149,28 +149,28 @@ public class PlayerMoveListener implements Listener {
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-unclaim.not-in-nation"));
             return;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-unclaim.not-in-nation"));
             return;
         }
 
         // Check if player is an officer
         if (!nation.isOfficer(playerId) && !player.hasPermission("sovereignty.admin.bypass")) {
             toggleManager.resetToggles(player);
-            player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("auto-unclaim.not-officer"));
             return;
         }
 
         // Try to unclaim the chunk - fix CompletableFuture handling
         plugin.getServiceManager().getChunkService().unclaimChunk(player, chunk).thenAccept(success -> {
             if (success) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.chunk-unclaimed"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("auto-unclaim.chunk-unclaimed"));
             }
         });
     }

@@ -129,7 +129,7 @@ public class VaultService {
     public void openVault(Player player, String nationId) {
         Nation nation = nationService.getNation(nationId);
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("vault.no-vault"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("vault.no-vault"));
             return;
         }
 
@@ -149,7 +149,7 @@ public class VaultService {
                     player.openInventory(inventory);
                 });
             } else {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("vault.no-vault"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("vault.no-vault"));
             }
         });
     }

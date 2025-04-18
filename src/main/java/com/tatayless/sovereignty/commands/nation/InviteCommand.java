@@ -30,7 +30,7 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
     @Override
     public boolean execute(Player player, String[] args) {
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "general.invalid-args",
                     "usage", "/nation invite <player>"));
             return true;
@@ -40,19 +40,19 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
         SovereigntyPlayer sovereigntyPlayer = plugin.getServiceManager().getPlayerService().getPlayer(playerId);
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         // Check if player is an officer (president or senator)
         if (!nation.isOfficer(playerId)) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return true;
         }
 
@@ -61,7 +61,7 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
         Player targetPlayer = Bukkit.getPlayer(targetName);
 
         if (targetPlayer == null || !targetPlayer.isOnline()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "nation.player-not-found",
                     "player", targetName));
             return true;

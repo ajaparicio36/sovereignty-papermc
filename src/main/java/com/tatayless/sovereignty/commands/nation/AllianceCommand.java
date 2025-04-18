@@ -40,17 +40,17 @@ public class AllianceCommand implements NationCommandExecutor.SubCommand {
                 .getPlayer(player.getUniqueId().toString());
 
         if (sovereigntyPlayer == null || sovereigntyPlayer.getNationId() == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         if (args.length < 1) {
             // Display help message
             player.sendMessage(
-                    plugin.getLocalizationManager().getMessage("alliance.help-header"));
+                    plugin.getLocalizationManager().getComponent("alliance.help-header"));
             for (NationCommandExecutor.SubCommand subcommand : subcommands) {
                 player.sendMessage(
-                        plugin.getLocalizationManager().getMessage("help.nation-command",
+                        plugin.getLocalizationManager().getComponent("help.nation-command",
                                 "command", "nation alliance",
                                 "subcommand", subcommand.getName(),
                                 "description", subcommand.getDescription()));
@@ -67,7 +67,7 @@ public class AllianceCommand implements NationCommandExecutor.SubCommand {
             }
         }
 
-        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.unknown-subcommand"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.unknown-subcommand"));
         return true;
     }
 

@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.Nation;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -220,7 +221,7 @@ public class TradeService {
                     Nation receivingNation2 = nationService.getNation(receivingNationId);
                     if (receivingNation2 != null) {
                         for (String officerId : getOfficerIds(receivingNation2)) {
-                            notifyPlayer(officerId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(officerId, plugin.getLocalizationManager().getComponent(
                                     "trade.received",
                                     "nation", sendingNation.getName()));
                         }
@@ -260,14 +261,14 @@ public class TradeService {
 
                     if (sendingNation != null) {
                         for (String memberId : getAllMemberIds(sendingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.accepted",
                                     "nation", receivingNation.getName()));
                         }
                     }
 
                     for (String memberId : getAllMemberIds(receivingNation)) {
-                        notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                        notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                 "trade.accepted",
                                 "nation", sendingNation.getName()));
                     }
@@ -325,7 +326,7 @@ public class TradeService {
 
                     if (sendingNation != null && !sendingNation.getName().equals(cancellerNationName)) {
                         for (String memberId : getAllMemberIds(sendingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.cancelled",
                                     "nation", cancellerNationName));
                         }
@@ -333,7 +334,7 @@ public class TradeService {
 
                     if (receivingNation != null && !receivingNation.getName().equals(cancellerNationName)) {
                         for (String memberId : getAllMemberIds(receivingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.cancelled",
                                     "nation", cancellerNationName));
                         }
@@ -409,13 +410,13 @@ public class TradeService {
 
                         // Notify nations
                         for (String memberId : getAllMemberIds(sendingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.completed",
                                     "nation", receivingNation.getName()));
                         }
 
                         for (String memberId : getAllMemberIds(receivingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.completed",
                                     "nation", sendingNation.getName()));
                         }
@@ -441,13 +442,13 @@ public class TradeService {
 
                         // Notify nations of failure
                         for (String memberId : getAllMemberIds(sendingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.failed",
                                     "nation", receivingNation.getName()));
                         }
 
                         for (String memberId : getAllMemberIds(receivingNation)) {
-                            notifyPlayer(memberId, plugin.getLocalizationManager().getMessage(
+                            notifyPlayer(memberId, plugin.getLocalizationManager().getComponent(
                                     "trade.failed",
                                     "nation", sendingNation.getName()));
                         }
@@ -695,10 +696,10 @@ public class TradeService {
         return members;
     }
 
-    private void notifyPlayer(String playerId, String message) {
+    private void notifyPlayer(String playerId, Component message) {
         org.bukkit.entity.Player player = Bukkit.getPlayer(UUID.fromString(playerId));
         if (player != null && player.isOnline()) {
-            player.sendMessage(plugin.getLocalizationManager().getComponent(message));
+            player.sendMessage(message);
         }
     }
 

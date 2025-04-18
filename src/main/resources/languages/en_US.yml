@@ -157,6 +157,16 @@ alliance:
   no-alliances: "<gray>Your nation has no alliances</gray>"
   current-alliances: "<yellow>Current Alliances:</yellow>"
   pending-requests: "<yellow>Pending Alliance Requests:</yellow>"
+  propose-usage: "<red>Usage: /nation propose <nation>"
+  propose-failed: "<red>Failed to propose an alliance. Make sure the nation exists and is not already allied."
+  accept-usage: "<red>Usage: /nation accept <nation>"
+  accept-failed: "<red>Failed to accept the alliance. Make sure the nation exists and is not already allied."
+  decline-usage: "<red>Usage: /nation decline <nation>"
+  decline-failed: "<red>Failed to decline the alliance. Make sure the nation exists and is not already allied."
+  cancel-usage: "<red>Usage: /nation cancel <nation>"
+  cancel-failed: "<red>Failed to cancel the alliance. Make sure the nation exists and is not already allied."
+  already-in-alliance: "<red>You are already in an alliance with this nation.</red>"
+  not-in-alliance: "<red>You are not in an alliance with this nation.</red>"
 
 # Trade related messages
 trade:

@@ -29,7 +29,7 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
     @Override
     public boolean execute(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "general.invalid-args",
                     "usage", "/nation appoint <player> <senator|soldier>"));
             return true;
@@ -39,13 +39,13 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
         SovereigntyPlayer sovereigntyPlayer = plugin.getServiceManager().getPlayerService().getPlayer(playerId);
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
@@ -54,7 +54,7 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
         Player targetPlayer = Bukkit.getPlayer(targetName);
 
         if (targetPlayer == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "nation.player-not-found",
                     "player", targetName));
             return true;
@@ -65,7 +65,7 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
 
         if (targetSovPlayer == null || !targetSovPlayer.hasNation() ||
                 !targetSovPlayer.getNationId().equals(nation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.player-not-member"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.player-not-member"));
             return true;
         }
 
@@ -77,7 +77,7 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
             case "senator":
                 // Only president can appoint senators
                 if (!nation.getPresidentId().equals(playerId)) {
-                    player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-president"));
+                    player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-president"));
                     return true;
                 }
                 role = Nation.Role.SENATOR;
@@ -86,21 +86,21 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
             case "soldier":
                 // Officers (presidents and senators) can appoint soldiers
                 if (!nation.isOfficer(playerId)) {
-                    player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+                    player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
                     return true;
                 }
                 role = Nation.Role.SOLDIER;
                 break;
 
             default:
-                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.invalid-role"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.invalid-role"));
                 return true;
         }
 
         // Check if player already has this role
         if ((role == Nation.Role.SENATOR && nation.getSenators().contains(targetId)) ||
                 (role == Nation.Role.SOLDIER && nation.getSoldiers().contains(targetId))) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.already-has-role"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.already-has-role"));
             return true;
         }
 
@@ -133,12 +133,12 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
         plugin.getServiceManager().getNationService().saveNation(nation);
 
         // Send messages
-        player.sendMessage(plugin.getLocalizationManager().getMessage(
+        player.sendMessage(plugin.getLocalizationManager().getComponent(
                 "nation.appointed",
                 "player", targetPlayer.getName(),
                 "role", roleArg));
 
-        targetPlayer.sendMessage(plugin.getLocalizationManager().getMessage(
+        targetPlayer.sendMessage(plugin.getLocalizationManager().getComponent(
                 "nation.been-appointed",
                 "role", roleArg));
 

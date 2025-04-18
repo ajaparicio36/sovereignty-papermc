@@ -52,7 +52,7 @@ public class NPCListener implements Listener {
             SovereigntyPlayer sovereigntyPlayer = playerService.getPlayer(playerId);
 
             if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
                 return;
             }
 
@@ -61,11 +61,11 @@ public class NPCListener implements Listener {
             Nation nation = nationService.getNation(nationId);
 
             if (nation == null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("vault.no-vault"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("vault.no-vault"));
                 return;
             }
 
-            player.sendMessage(plugin.getLocalizationManager().getMessage("vault.opened"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("vault.opened"));
             vaultService.openVault(player, nationId);
             return;
         }

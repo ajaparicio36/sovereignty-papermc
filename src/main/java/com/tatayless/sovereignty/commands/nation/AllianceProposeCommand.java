@@ -33,18 +33,18 @@ public class AllianceProposeCommand implements NationCommandExecutor.SubCommand 
                 .getPlayer(player.getUniqueId().toString());
 
         if (sovereigntyPlayer == null || sovereigntyPlayer.getNationId() == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (!nation.isOfficer(player.getUniqueId().toString())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return true;
         }
 
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.propose-usage",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.propose-usage",
                     "Usage: /nation alliance propose <nation>"));
             return true;
         }
@@ -52,18 +52,18 @@ public class AllianceProposeCommand implements NationCommandExecutor.SubCommand 
         String targetNationName = args[0];
         Nation targetNation = plugin.getServiceManager().getNationService().getNationByName(targetNationName);
         if (targetNation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-found"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-found"));
             return true;
         }
 
         if (targetNation.getId().equals(nation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.cannot-ally-self",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.cannot-ally-self",
                     "You cannot ally with your own nation"));
             return true;
         }
 
         if (plugin.getServiceManager().getAllianceService().isAllied(nation.getId(), targetNation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.already-allied",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.already-allied",
                     "You are already allied with this nation"));
             return true;
         }
@@ -72,10 +72,10 @@ public class AllianceProposeCommand implements NationCommandExecutor.SubCommand 
                 .proposeAlliance(nation.getId(), targetNation.getId(), player.getUniqueId().toString())
                 .thenAccept(success -> {
                     if (success) {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.request-sent",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.request-sent",
                                 "nation", targetNationName));
                     } else {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.request-failed",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.request-failed",
                                 "Failed to send alliance request"));
                     }
                 });

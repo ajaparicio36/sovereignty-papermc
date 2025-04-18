@@ -39,13 +39,13 @@ public class InfoCommand implements NationCommandExecutor.SubCommand {
             // Show player's own nation info
             SovereigntyPlayer sovereigntyPlayer = playerService.getPlayer(player.getUniqueId().toString());
             if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
                 return true;
             }
 
             nation = nationService.getNation(sovereigntyPlayer.getNationId());
             if (nation == null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
                 return true;
             }
         } else {
@@ -54,7 +54,7 @@ public class InfoCommand implements NationCommandExecutor.SubCommand {
             nation = nationService.getNationByName(nationName);
 
             if (nation == null) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "nation.nation-not-found",
                         "nation", nationName));
                 return true;
@@ -96,7 +96,7 @@ public class InfoCommand implements NationCommandExecutor.SubCommand {
         }
 
         // Send info message
-        player.sendMessage(plugin.getLocalizationManager().getMessage(
+        player.sendMessage(plugin.getLocalizationManager().getComponent(
                 "nation.info",
                 "name", nation.getName(),
                 "power", String.format("%.2f", nation.getPower()),

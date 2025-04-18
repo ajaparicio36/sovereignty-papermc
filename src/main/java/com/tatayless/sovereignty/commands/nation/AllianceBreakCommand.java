@@ -32,18 +32,18 @@ public class AllianceBreakCommand implements NationCommandExecutor.SubCommand {
                 .getPlayer(player.getUniqueId().toString());
 
         if (sovereigntyPlayer == null || sovereigntyPlayer.getNationId() == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (!nation.isOfficer(player.getUniqueId().toString())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return true;
         }
 
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.break-usage",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.break-usage",
                     "Usage: /nation alliance break <nation>"));
             return true;
         }
@@ -52,12 +52,12 @@ public class AllianceBreakCommand implements NationCommandExecutor.SubCommand {
         Nation allyNation = plugin.getServiceManager().getNationService().getNationByName(allyNationName);
 
         if (allyNation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-found"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-found"));
             return true;
         }
 
         if (!plugin.getServiceManager().getAllianceService().isAllied(nation.getId(), allyNation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.not-allied",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.not-allied",
                     "You are not allied with this nation"));
             return true;
         }
@@ -66,10 +66,10 @@ public class AllianceBreakCommand implements NationCommandExecutor.SubCommand {
                 .breakAlliance(nation.getId(), allyNation.getId(), player.getUniqueId().toString())
                 .thenAccept(success -> {
                     if (success) {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.break-success",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.break-success",
                                 "nation", allyNationName));
                     } else {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.break-failed",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.break-failed",
                                 "Failed to break alliance"));
                     }
                 });

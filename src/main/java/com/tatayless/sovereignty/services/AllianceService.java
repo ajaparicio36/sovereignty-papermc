@@ -5,6 +5,7 @@ import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -47,7 +48,7 @@ public class AllianceService {
         allianceRequests.computeIfAbsent(receiverNationId, k -> new HashSet<>()).add(senderNationId);
 
         // Notify players
-        notifyNationOfficers(receiverNationId, plugin.getLocalizationManager().getMessage(
+        notifyNationOfficers(receiverNationId, plugin.getLocalizationManager().getComponent(
                 "alliance.request-received",
                 "nation", senderNation.getName()));
 
@@ -90,12 +91,12 @@ public class AllianceService {
         CompletableFuture<Boolean> future2 = nationService.saveNation(senderNation);
 
         // Notify players
-        String message = plugin.getLocalizationManager().getMessage(
+        Component message = plugin.getLocalizationManager().getComponent(
                 "alliance.formed",
                 "nation", senderNation.getName());
         notifyNationPlayers(nationId, message);
 
-        message = plugin.getLocalizationManager().getMessage(
+        message = plugin.getLocalizationManager().getComponent(
                 "alliance.formed",
                 "nation", nation.getName());
         notifyNationPlayers(senderNationId, message);
@@ -131,12 +132,12 @@ public class AllianceService {
         CompletableFuture<Boolean> future2 = nationService.saveNation(allyNation);
 
         // Notify players
-        String message = plugin.getLocalizationManager().getMessage(
+        Component message = plugin.getLocalizationManager().getComponent(
                 "alliance.broken",
                 "nation", allyNation.getName());
         notifyNationPlayers(nationId, message);
 
-        message = plugin.getLocalizationManager().getMessage(
+        message = plugin.getLocalizationManager().getComponent(
                 "alliance.broken",
                 "nation", nation.getName());
         notifyNationPlayers(allyNationId, message);
@@ -174,7 +175,7 @@ public class AllianceService {
         // Notify sender nation
         Nation senderNation = nationService.getNation(senderNationId);
         if (senderNation != null) {
-            String message = plugin.getLocalizationManager().getMessage(
+            Component message = plugin.getLocalizationManager().getComponent(
                     "alliance.request-denied-notification",
                     "nation", nation.getName());
             notifyNationOfficers(senderNationId, message);
@@ -195,7 +196,7 @@ public class AllianceService {
         return allianceRequests.getOrDefault(nationId, new HashSet<>());
     }
 
-    private void notifyNationOfficers(String nationId, String message) {
+    private void notifyNationOfficers(String nationId, Component message) {
         Nation nation = nationService.getNation(nationId);
         if (nation == null)
             return;
@@ -215,7 +216,7 @@ public class AllianceService {
         }
     }
 
-    private void notifyNationPlayers(String nationId, String message) {
+    private void notifyNationPlayers(String nationId, Component message) {
         for (Player player : Bukkit.getOnlinePlayers()) {
             SovereigntyPlayer sovereigntyPlayer = plugin.getServiceManager().getPlayerService()
                     .getPlayer(player.getUniqueId().toString());

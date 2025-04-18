@@ -21,7 +21,7 @@ public class VaultCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getLocalizationManager().getMessage("general.player-only"));
+            sender.sendMessage(plugin.getLocalizationManager().getComponent("general.player-only"));
             return true;
         }
 
@@ -31,12 +31,12 @@ public class VaultCommand implements CommandExecutor, TabCompleter {
 
         // Check if player is in a nation
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         // Open vault
-        player.sendMessage(plugin.getLocalizationManager().getMessage("vault.opened"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("vault.opened"));
         plugin.getServiceManager().getVaultService().openVault(player, sovereigntyPlayer.getNationId());
         return true;
     }

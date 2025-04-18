@@ -22,13 +22,13 @@ public class ChunkService {
         Nation nation = nationService.getPlayerNation(playerId);
 
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return CompletableFuture.completedFuture(false);
         }
 
         // Check if player has permission to claim
         if (!nation.isOfficer(playerId) && !player.hasPermission("sovereignty.admin.bypass")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return CompletableFuture.completedFuture(false);
         }
 
@@ -36,7 +36,7 @@ public class ChunkService {
         ChunkLocation chunkLocation = new ChunkLocation(chunk);
         if (nationService.isChunkClaimed(chunkLocation)) {
             Nation owner = nationService.getNationByChunk(chunkLocation);
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "chunk.already-claimed",
                     "nation", owner.getName()));
             return CompletableFuture.completedFuture(false);
@@ -45,14 +45,14 @@ public class ChunkService {
         // Check if nation has reached chunk limit
         int maxChunks = plugin.getConfigManager().getMaxChunksForPowerLevel(nation.getPowerLevel());
         if (nation.getClaimedChunks().size() >= maxChunks && !player.hasPermission("sovereignty.admin.chunks")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("chunk.max-reached"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("chunk.max-reached"));
             return CompletableFuture.completedFuture(false);
         }
 
         // All checks passed, claim the chunk
         return nationService.claimChunk(nation.getId(), chunkLocation).thenApply(success -> {
             if (success) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "chunk.claimed",
                         "nation", nation.getName()));
             }
@@ -65,26 +65,26 @@ public class ChunkService {
         Nation nation = nationService.getPlayerNation(playerId);
 
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return CompletableFuture.completedFuture(false);
         }
 
         // Check if player has permission to unclaim
         if (!nation.isOfficer(playerId) && !player.hasPermission("sovereignty.admin.bypass")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return CompletableFuture.completedFuture(false);
         }
 
         // Check if chunk belongs to the nation
         ChunkLocation chunkLocation = new ChunkLocation(chunk);
         if (!nationService.isChunkClaimed(chunkLocation)) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("chunk.not-claimed"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("chunk.not-claimed"));
             return CompletableFuture.completedFuture(false);
         }
 
         Nation owner = nationService.getNationByChunk(chunkLocation);
         if (!owner.getId().equals(nation.getId()) && !player.hasPermission("sovereignty.admin.bypass")) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "chunk.already-claimed",
                     "nation", owner.getName()));
             return CompletableFuture.completedFuture(false);
@@ -93,7 +93,7 @@ public class ChunkService {
         // All checks passed, unclaim the chunk
         return nationService.unclaimChunk(nation.getId(), chunkLocation).thenApply(success -> {
             if (success) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "chunk.unclaimed",
                         "nation", nation.getName()));
             }

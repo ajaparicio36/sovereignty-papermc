@@ -1,10 +1,13 @@
 package com.tatayless.sovereignty.localization;
 
 import com.tatayless.sovereignty.Sovereignty;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.InputStream;
@@ -63,38 +66,38 @@ public class LocalizationManager {
      * Gets a localized message with placeholders replaced.
      * 
      * @param key          The translation key
-     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
-     *                     ...]
-     * @return The formatted message string (not parsed with MiniMessage)
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
+     * @return The raw message string with placeholders replaced
      */
     public String getMessage(String key, String... placeholders) {
-        String message = null;
+        String rawMessage = null;
 
         // Try to get from selected language
         if (languageConfigs.containsKey(language)) {
-            message = languageConfigs.get(language).getString(key);
+            rawMessage = languageConfigs.get(language).getString(key);
         }
 
         // Fallback to default language
-        if (message == null && languageConfigs.containsKey("en_US")) {
-            message = languageConfigs.get("en_US").getString(key);
+        if (rawMessage == null && languageConfigs.containsKey("en_US")) {
+            rawMessage = languageConfigs.get("en_US").getString(key);
         }
 
         // Final fallback
-        if (message == null) {
+        if (rawMessage == null) {
             return "Missing translation key: " + key;
         }
 
         // Replace placeholders
-        return replacePlaceholders(message, placeholders);
+        return replacePlaceholders(rawMessage, placeholders);
     }
 
     /**
      * Gets a localized message as a Component with MiniMessage formatting.
      * 
      * @param key          The translation key
-     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
-     *                     ...]
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
      * @return The formatted message as a Component
      */
     public Component getComponent(String key, String... placeholders) {
@@ -103,20 +106,87 @@ public class LocalizationManager {
     }
 
     /**
+     * Gets a localized message that can be sent to players with proper formatting.
+     * 
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
+     * @return A special wrapper that can be sent to players with proper formatting
+     */
+    public LocalizedMessage getLocalizedMessage(String key, String... placeholders) {
+        String message = getMessage(key, placeholders);
+        return new LocalizedMessage(message, miniMessage.deserialize(message));
+    }
+
+    /**
      * Gets a localized message with placeholders replaced and parsed with
      * MiniMessage.
      * 
      * @param key          The translation key
-     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
-     *                     ...]
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
      * @return The formatted message string with MiniMessage tags processed
      * @deprecated Use getComponent() instead which properly preserves formatting
      */
     @Deprecated
     public String getFormattedMessage(String key, String... placeholders) {
-        // Just get the raw message with placeholders replaced
-        // Don't deserialize and serialize again as it loses the formatting
         return getMessage(key, placeholders);
+    }
+
+    /**
+     * Wrapper class for localized messages that properly handles formatting when
+     * sent to players.
+     */
+    public class LocalizedMessage {
+        private final String rawMessage;
+        private final Component component;
+
+        public LocalizedMessage(String rawMessage, Component component) {
+            this.rawMessage = rawMessage;
+            this.component = component;
+        }
+
+        /**
+         * @return The raw message with placeholders replaced but without formatting
+         */
+        @Override
+        public String toString() {
+            return rawMessage;
+        }
+
+        /**
+         * Sends the formatted message to a player or any command sender
+         * 
+         * @param recipient The recipient of the message
+         */
+        public void sendTo(CommandSender recipient) {
+            recipient.sendMessage(component);
+        }
+
+        /**
+         * Sends the formatted message to any Adventure audience
+         * 
+         * @param audience The audience to send to
+         */
+        public void sendTo(Audience audience) {
+            audience.sendMessage(component);
+        }
+
+        /**
+         * Broadcasts the message to all online players
+         */
+        public void broadcast() {
+            plugin.getServer().sendMessage(component);
+        }
+
+        /**
+         * Get the formatted component
+         * 
+         * @return The Component with MiniMessage formatting applied
+         */
+        public Component asComponent() {
+            return component;
+        }
     }
 
     /**
@@ -146,5 +216,59 @@ public class LocalizationManager {
     public void reloadLanguages() {
         languageConfigs.clear();
         loadLanguages();
+    }
+
+    /**
+     * Sends a localized message to a CommandSender with proper MiniMessage
+     * formatting.
+     * 
+     * @param sender       The recipient of the message
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
+     */
+    public void sendMessage(CommandSender sender, String key, String... placeholders) {
+        Component component = getComponent(key, placeholders);
+        sender.sendMessage(component);
+    }
+
+    /**
+     * Sends a localized message to a Player with proper MiniMessage formatting.
+     * 
+     * @param player       The player to send the message to
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
+     */
+    public void sendMessage(Player player, String key, String... placeholders) {
+        Component component = getComponent(key, placeholders);
+        player.sendMessage(component);
+    }
+
+    /**
+     * Sends a localized message to any Adventure Audience with proper MiniMessage
+     * formatting.
+     * 
+     * @param audience     The audience to send the message to
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
+     */
+    public void sendMessage(Audience audience, String key, String... placeholders) {
+        Component component = getComponent(key, placeholders);
+        audience.sendMessage(component);
+    }
+
+    /**
+     * Broadcasts a localized message to all players on the server with proper
+     * MiniMessage formatting.
+     * 
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2,
+     *                     value2,...]
+     */
+    public void broadcastMessage(String key, String... placeholders) {
+        Component component = getComponent(key, placeholders);
+        plugin.getServer().sendMessage(component);
     }
 }

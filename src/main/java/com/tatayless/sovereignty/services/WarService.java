@@ -4,6 +4,7 @@ import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jooq.DSLContext;
@@ -116,11 +117,11 @@ public class WarService {
 
                     // Notify players
                     notifyNationPlayers(attackerNationId,
-                            plugin.getLocalizationManager().getMessage("war.declared", "nation",
+                            plugin.getLocalizationManager().getComponent("war.declared", "nation",
                                     defenderNation.getName()));
 
                     notifyNationPlayers(defenderNationId,
-                            plugin.getLocalizationManager().getMessage("war.received", "nation",
+                            plugin.getLocalizationManager().getComponent("war.received", "nation",
                                     attackerNation.getName()));
 
                     return war;
@@ -172,7 +173,7 @@ public class WarService {
 
                 // Notify players
                 String winnerName = winner.getName();
-                String message = plugin.getLocalizationManager().getMessage(
+                Component message = plugin.getLocalizationManager().getComponent(
                         "war.ended",
                         "attacker", attackerNation.getName(),
                         "defender", defenderNation.getName(),
@@ -223,10 +224,22 @@ public class WarService {
                 activeWars.remove(warId);
 
                 // Notify players
-                String message = plugin.getLocalizationManager().getMessage("war.cancelled");
+                Component message = plugin.getLocalizationManager().getComponent("war.cancelled");
 
-                notifyNationPlayers(attackerNation.getId(), message);
-                notifyNationPlayers(defenderNation.getId(), message);
+                // Update both notify calls to handle the Component
+                for (SovereigntyPlayer player : playerService.getPlayersByNation(attackerNation.getId())) {
+                    Player bukkitPlayer = Bukkit.getPlayer(UUID.fromString(player.getId()));
+                    if (bukkitPlayer != null && bukkitPlayer.isOnline()) {
+                        bukkitPlayer.sendMessage(message);
+                    }
+                }
+
+                for (SovereigntyPlayer player : playerService.getPlayersByNation(defenderNation.getId())) {
+                    Player bukkitPlayer = Bukkit.getPlayer(UUID.fromString(player.getId()));
+                    if (bukkitPlayer != null && bukkitPlayer.isOnline()) {
+                        bukkitPlayer.sendMessage(message);
+                    }
+                }
 
                 return true;
             } catch (SQLException e) {
@@ -290,10 +303,10 @@ public class WarService {
 
                     // Broadcast assassination message
                     String nationName = nationService.getNation(victim.getNationId()).getName();
-                    String message = plugin.getLocalizationManager().getMessage(
+                    Component message = plugin.getLocalizationManager().getComponent(
                             "war.president-killed",
                             "nation", nationName);
-                    Bukkit.getServer().broadcast(net.kyori.adventure.text.Component.text(message));
+                    Bukkit.getServer().broadcast(message);
                 } else if (isAttackerKill && war.getAttackerKills() >= war.getRequiredKills()) {
                     winnerId = war.getAttackerNationId();
                 } else if (!isAttackerKill && war.getDefenderKills() >= war.getRequiredKills()) {
@@ -303,7 +316,7 @@ public class WarService {
                 // Broadcast kill
                 @SuppressWarnings("unused")
                 Nation playerNation = nationService.getNation(player.getNationId());
-                String killMessage = plugin.getLocalizationManager().getMessage(
+                Component killMessage = plugin.getLocalizationManager().getComponent(
                         "war.player-killed",
                         "player", victim.getName(),
                         "nation", nationService.getNation(victim.getNationId()).getName(),
@@ -362,7 +375,7 @@ public class WarService {
         return wars;
     }
 
-    private void notifyNationPlayers(String nationId, String message) {
+    private void notifyNationPlayers(String nationId, Component message) {
         List<SovereigntyPlayer> players = playerService.getPlayersByNation(nationId);
         for (SovereigntyPlayer player : players) {
             Player bukkitPlayer = Bukkit.getPlayer(UUID.fromString(player.getId()));

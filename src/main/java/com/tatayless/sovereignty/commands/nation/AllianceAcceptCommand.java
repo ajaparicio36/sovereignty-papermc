@@ -24,7 +24,8 @@ public class AllianceAcceptCommand implements NationCommandExecutor.SubCommand {
 
     @Override
     public String getDescription() {
-        return plugin.getLocalizationManager().getMessage("alliance.accept-description", "Accept an alliance request");
+        return plugin.getLocalizationManager().getMessage("alliance.accept-description",
+                "Accept an alliance request");
     }
 
     @Override
@@ -33,18 +34,18 @@ public class AllianceAcceptCommand implements NationCommandExecutor.SubCommand {
                 .getPlayer(player.getUniqueId().toString());
 
         if (sovereigntyPlayer == null || sovereigntyPlayer.getNationId() == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (!nation.isOfficer(player.getUniqueId().toString())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-officer"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-officer"));
             return true;
         }
 
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.accept-usage",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.accept-usage",
                     "Usage: /nation alliance accept <nation>"));
             return true;
         }
@@ -53,7 +54,7 @@ public class AllianceAcceptCommand implements NationCommandExecutor.SubCommand {
         Nation senderNation = plugin.getServiceManager().getNationService().getNationByName(senderNationName);
 
         if (senderNation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-found"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-found"));
             return true;
         }
 
@@ -61,7 +62,7 @@ public class AllianceAcceptCommand implements NationCommandExecutor.SubCommand {
                 .getAllianceRequests(nation.getId());
 
         if (!requests.contains(senderNation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.no-request-found",
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.no-request-found",
                     "No alliance request found from this nation"));
             return true;
         }
@@ -70,10 +71,10 @@ public class AllianceAcceptCommand implements NationCommandExecutor.SubCommand {
                 .acceptAlliance(nation.getId(), senderNation.getId(), player.getUniqueId().toString())
                 .thenAccept(success -> {
                     if (success) {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.request-accepted",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.request-accepted",
                                 "nation", senderNationName));
                     } else {
-                        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.accept-failed",
+                        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.accept-failed",
                                 "Failed to accept alliance request"));
                     }
                 });

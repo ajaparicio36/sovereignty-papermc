@@ -49,7 +49,7 @@ public class NationCommandExecutor implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getLocalizationManager().getMessage("general.player-only"));
+            sender.sendMessage(plugin.getLocalizationManager().getComponent("general.player-only"));
             return true;
         }
 
@@ -98,10 +98,10 @@ public class NationCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(plugin.getLocalizationManager().getMessage("help.nation-header"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("help.nation-header"));
 
         for (SubCommand subCommand : subCommands.values()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "help.nation-command",
                     "command", plugin.getCommand("nation").getLabel(),
                     "subcommand", subCommand.getName(),

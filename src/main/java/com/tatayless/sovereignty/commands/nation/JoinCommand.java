@@ -30,7 +30,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
     @Override
     public boolean execute(Player player, String[] args) {
         if (args.length < 1) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "general.invalid-args",
                     "usage", "/nation join <nation>"));
             return true;
@@ -46,7 +46,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
 
         // Check if player is already in a nation
         if (sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.already-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.already-in-nation"));
             return true;
         }
 
@@ -55,7 +55,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
         Nation nation = plugin.getServiceManager().getNationService().getNationByName(nationName);
 
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage(
+            player.sendMessage(plugin.getLocalizationManager().getComponent(
                     "nation.nation-not-found",
                     "nation", nationName));
             return true;
@@ -72,7 +72,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
         }
 
         if (inviteCommand == null || !inviteCommand.hasInvite(player.getUniqueId(), nation.getId())) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.invite.no-invitation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.invite.no-invitation"));
             return true;
         }
 
@@ -89,7 +89,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
         inviteCommand.removeInvite(player.getUniqueId());
 
         // Send messages
-        player.sendMessage(plugin.getLocalizationManager().getMessage(
+        player.sendMessage(plugin.getLocalizationManager().getComponent(
                 "nation.joined",
                 "name", nation.getName()));
 
@@ -102,7 +102,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
                     member.getNationId().equals(nation.getId()) &&
                     !member.getId().equals(playerId)) {
 
-                onlinePlayer.sendMessage(plugin.getLocalizationManager().getMessage(
+                onlinePlayer.sendMessage(plugin.getLocalizationManager().getComponent(
                         "nation.player-joined",
                         "player", player.getName()));
             }

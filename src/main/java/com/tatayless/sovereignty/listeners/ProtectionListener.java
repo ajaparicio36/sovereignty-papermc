@@ -64,7 +64,7 @@ public class ProtectionListener implements Listener {
 
                 if (!warException) {
                     event.setCancelled(true);
-                    player.sendMessage(plugin.getLocalizationManager().getMessage(
+                    player.sendMessage(plugin.getLocalizationManager().getComponent(
                             "protection.cannot-break",
                             "nation", ownerNation.getName()));
                 }
@@ -103,7 +103,7 @@ public class ProtectionListener implements Listener {
 
                 if (!warException) {
                     event.setCancelled(true);
-                    player.sendMessage(plugin.getLocalizationManager().getMessage(
+                    player.sendMessage(plugin.getLocalizationManager().getComponent(
                             "protection.cannot-place",
                             "nation", ownerNation.getName()));
                 }
@@ -132,7 +132,7 @@ public class ProtectionListener implements Listener {
                             !player.hasPermission("sovereignty.admin.bypass"))) {
 
                 event.setCancelled(true);
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "protection.cannot-interact",
                         "nation", ownerNation.getName()));
             }
@@ -184,7 +184,7 @@ public class ProtectionListener implements Listener {
                 }
 
                 event.setCancelled(true);
-                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                player.sendMessage(plugin.getLocalizationManager().getComponent(
                         "protection.cannot-damage-entity",
                         "nation", ownerNation.getName()));
             }

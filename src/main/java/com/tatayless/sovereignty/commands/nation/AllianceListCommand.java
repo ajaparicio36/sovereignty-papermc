@@ -32,23 +32,23 @@ public class AllianceListCommand implements NationCommandExecutor.SubCommand {
                 .getPlayer(player.getUniqueId().toString());
 
         if (sovereigntyPlayer == null || sovereigntyPlayer.getNationId() == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.error"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.error"));
             return true;
         }
 
-        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.list-header"));
+        player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.list-header"));
 
         // List current alliances
         if (nation.getAlliances().isEmpty()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.no-alliances"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.no-alliances"));
         } else {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.current-alliances"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.current-alliances"));
             for (String allyId : nation.getAlliances()) {
                 Nation ally = plugin.getServiceManager().getNationService().getNation(allyId);
                 if (ally != null) {
@@ -63,7 +63,7 @@ public class AllianceListCommand implements NationCommandExecutor.SubCommand {
                     .getAllianceRequests(nation.getId());
 
             if (!requests.isEmpty()) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.pending-requests"));
+                player.sendMessage(plugin.getLocalizationManager().getComponent("alliance.pending-requests"));
                 for (String requesterId : requests) {
                     Nation requester = plugin.getServiceManager().getNationService().getNation(requesterId);
                     if (requester != null) {

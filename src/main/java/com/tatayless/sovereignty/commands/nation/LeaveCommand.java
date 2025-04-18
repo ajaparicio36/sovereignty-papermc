@@ -32,19 +32,19 @@ public class LeaveCommand implements NationCommandExecutor.SubCommand {
         SovereigntyPlayer sovereigntyPlayer = plugin.getServiceManager().getPlayerService().getPlayer(playerId);
 
         if (sovereigntyPlayer == null || !sovereigntyPlayer.hasNation()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         Nation nation = plugin.getServiceManager().getNationService().getNation(sovereigntyPlayer.getNationId());
         if (nation == null) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.not-in-nation"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.not-in-nation"));
             return true;
         }
 
         // Presidents cannot leave their nation, they must disband it
         if (nation.getPresidentId().equals(playerId)) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.president-cant-leave"));
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.president-cant-leave"));
             return true;
         }
 
@@ -72,7 +72,7 @@ public class LeaveCommand implements NationCommandExecutor.SubCommand {
         plugin.getServiceManager().getNationService().saveNation(nation);
 
         // Send messages
-        player.sendMessage(plugin.getLocalizationManager().getMessage(
+        player.sendMessage(plugin.getLocalizationManager().getComponent(
                 "nation.left",
                 "name", nationName));
 
@@ -82,7 +82,7 @@ public class LeaveCommand implements NationCommandExecutor.SubCommand {
                     .getPlayer(onlinePlayer.getUniqueId().toString());
 
             if (member != null && oldNationId.equals(member.getNationId())) {
-                onlinePlayer.sendMessage(plugin.getLocalizationManager().getMessage(
+                onlinePlayer.sendMessage(plugin.getLocalizationManager().getComponent(
                         "nation.player-left",
                         "player", player.getName()));
             }
