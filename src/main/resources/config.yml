@@ -57,7 +57,16 @@ war:
 
 # Vault Configuration
 vaults:
-  # Number of rows in nation vault (1 row = 9 slots)
+  # Base number of rows in nation vault (1 row = 9 slots)
+  base-vault-rows: 6
+
+  # Additional rows added per power level
+  additional-rows-per-level: 6
+
+  # Maximum number of vault pages
+  max-pages: 10
+
+  # Number of rows in nation vault (1 row = 9 slots) - legacy setting
   nation-vault-rows: 3
 
   # Number of rows in trade vault (1 row = 9 slots)

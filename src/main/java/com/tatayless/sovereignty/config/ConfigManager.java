@@ -125,7 +125,16 @@ public class ConfigManager {
     }
 
     // Vault Settings
+    public int getBaseVaultRows() {
+        return config.getInt("vaults.base-vault-rows", 6);
+    }
+
+    public int getAdditionalRowsPerPowerLevel() {
+        return config.getInt("vaults.additional-rows-per-level", 6);
+    }
+
     public int getNationVaultRows() {
+        // Keeping this for backward compatibility
         return config.getInt("vaults.nation-vault-rows", 3);
     }
 
@@ -135,6 +144,10 @@ public class ConfigManager {
 
     public int getVaultExpiryTimeMinutes() {
         return config.getInt("vaults.expired-items-time-minutes", 1440); // Default 24 hours
+    }
+
+    public int getMaxVaultPages() {
+        return config.getInt("vaults.max-pages", 10);
     }
 
     public FileConfiguration getConfig() {
