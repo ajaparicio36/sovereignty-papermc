@@ -59,6 +59,14 @@ public class LocalizationManager {
         }
     }
 
+    /**
+     * Gets a localized message with placeholders replaced.
+     * 
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
+     *                     ...]
+     * @return The formatted message string (not parsed with MiniMessage)
+     */
     public String getMessage(String key, String... placeholders) {
         String message = null;
 
@@ -78,20 +86,57 @@ public class LocalizationManager {
         }
 
         // Replace placeholders
-        if (placeholders != null && placeholders.length > 0) {
-            for (int i = 0; i < placeholders.length; i += 2) {
-                if (i + 1 < placeholders.length) {
-                    message = message.replace("{" + placeholders[i] + "}", placeholders[i + 1]);
-                }
-            }
-        }
-
-        return message;
+        return replacePlaceholders(message, placeholders);
     }
 
+    /**
+     * Gets a localized message as a Component with MiniMessage formatting.
+     * 
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
+     *                     ...]
+     * @return The formatted message as a Component
+     */
     public Component getComponent(String key, String... placeholders) {
         String message = getMessage(key, placeholders);
         return miniMessage.deserialize(message);
+    }
+
+    /**
+     * Gets a localized message with placeholders replaced and parsed with
+     * MiniMessage.
+     * 
+     * @param key          The translation key
+     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
+     *                     ...]
+     * @return The formatted message string (parsed with MiniMessage)
+     */
+    public String getFormattedMessage(String key, String... placeholders) {
+        return miniMessage.serialize(getComponent(key, placeholders));
+    }
+
+    /**
+     * Replaces placeholders in a message.
+     * 
+     * @param message      The message to process
+     * @param placeholders Placeholders in the format [key1, value1, key2, value2,
+     *                     ...]
+     * @return The message with placeholders replaced
+     */
+    private String replacePlaceholders(String message, String... placeholders) {
+        if (message == null)
+            return "";
+        if (placeholders == null || placeholders.length == 0)
+            return message;
+
+        String result = message;
+        for (int i = 0; i < placeholders.length; i += 2) {
+            if (i + 1 < placeholders.length) {
+                result = result.replace("{" + placeholders[i] + "}", placeholders[i + 1]);
+            }
+        }
+
+        return result;
     }
 
     public void reloadLanguages() {
