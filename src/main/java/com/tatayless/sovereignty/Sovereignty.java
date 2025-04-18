@@ -1,48 +1,66 @@
 package com.tatayless.sovereignty;
 
+import com.tatayless.sovereignty.commands.CommandManager;
 import com.tatayless.sovereignty.config.ConfigManager;
 import com.tatayless.sovereignty.database.DatabaseManager;
+import com.tatayless.sovereignty.listeners.ListenerManager;
 import com.tatayless.sovereignty.localization.LocalizationManager;
+import com.tatayless.sovereignty.services.ServiceManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.sql.SQLException;
+
 public class Sovereignty extends JavaPlugin {
+
     private ConfigManager configManager;
     private DatabaseManager databaseManager;
     private LocalizationManager localizationManager;
+    private ServiceManager serviceManager;
+    private CommandManager commandManager;
+    private ListenerManager listenerManager;
 
     @Override
     public void onEnable() {
-        // Save default configuration if it doesn't exist
-        saveDefaultConfig();
+        // Initialize configuration
+        configManager = new ConfigManager(this);
+        configManager.loadConfig();
 
-        // Initialize managers
-        this.configManager = new ConfigManager(this);
-        this.localizationManager = new LocalizationManager(this);
-        this.databaseManager = new DatabaseManager(this, configManager);
+        // Initialize localization
+        localizationManager = new LocalizationManager(this, configManager.getLanguage());
 
+        // Initialize database
+        databaseManager = new DatabaseManager(this, configManager);
         try {
-            // Initialize database
             databaseManager.initialize();
-            getLogger().info(localizationManager.getMessage("database.initialized"));
-        } catch (Exception e) {
-            getLogger().severe(localizationManager.getMessage("database.error"));
-            getLogger().severe(e.getMessage());
-            // Disable the plugin if database initialization fails
+        } catch (SQLException e) {
+            getLogger().severe("Failed to initialize database: " + e.getMessage());
+            e.printStackTrace();
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        getLogger().info(localizationManager.getMessage("plugin.enabled"));
+        // Initialize services
+        serviceManager = new ServiceManager(this);
+        serviceManager.initializeServices();
+
+        // Initialize commands
+        commandManager = new CommandManager(this);
+        commandManager.registerCommands();
+
+        // Initialize event listeners
+        listenerManager = new ListenerManager(this);
+        listenerManager.registerListeners();
+
+        getLogger().info("Sovereignty plugin has been enabled!");
     }
 
     @Override
     public void onDisable() {
-        // Close database connections
         if (databaseManager != null) {
             databaseManager.shutdown();
         }
 
-        getLogger().info(localizationManager.getMessage("plugin.disabled"));
+        getLogger().info("Sovereignty plugin has been disabled!");
     }
 
     public ConfigManager getConfigManager() {
@@ -55,5 +73,9 @@ public class Sovereignty extends JavaPlugin {
 
     public LocalizationManager getLocalizationManager() {
         return localizationManager;
+    }
+
+    public ServiceManager getServiceManager() {
+        return serviceManager;
     }
 }
