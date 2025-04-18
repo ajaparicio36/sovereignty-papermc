@@ -6,7 +6,6 @@ import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import com.tatayless.sovereignty.services.NationService;
 import com.tatayless.sovereignty.services.PlayerService;
 import com.tatayless.sovereignty.services.WarService;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
