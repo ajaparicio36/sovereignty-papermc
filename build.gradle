@@ -2,10 +2,11 @@ plugins {
     id 'java'
     id 'com.gradleup.shadow' version '8.3.0'
     id 'nu.studer.jooq' version '8.2' // Add jOOQ plugin
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.16"
 }
 
 group = 'com.tatayless.sovereignty'
-version = '0.1-SNAPSHOT'
+version = '0.2-SNAPSHOT'
 description = 'Sovereignty, build your nations and prosper in the world of Minecraft!'
 
 repositories {
@@ -22,6 +23,7 @@ repositories {
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT'
+    paperweight.paperDevBundle("1.21.5-R0.1-SNAPSHOT")
     
     // Database drivers
     implementation 'com.mysql:mysql-connector-j:8.0.33' // MySQL driver
@@ -62,8 +64,14 @@ shadowJar {
     minimize() // Removes unused classes from dependencies
 }
 
+// Fix the dependency issue by making reobfJar depend on jar
+tasks.named('reobfJar').configure {
+    dependsOn(tasks.named('jar'))
+}
+
 // Set the shadowJar as the default artifact
 tasks.named('assemble').configure {
+    dependsOn(tasks.reobfJar)
     dependsOn tasks.named('shadowJar')
 }
 

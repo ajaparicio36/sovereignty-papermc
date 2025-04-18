@@ -709,7 +709,7 @@ public class TradeService {
     private void notifyPlayer(String playerId, String message) {
         org.bukkit.entity.Player player = Bukkit.getPlayer(UUID.fromString(playerId));
         if (player != null && player.isOnline()) {
-            player.sendMessage(message);
+            player.sendMessage(plugin.getLocalizationManager().getComponent(message));
         }
     }
 

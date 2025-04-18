@@ -46,6 +46,15 @@ nation:
   soldier-title: "<gray>Soldier"
   citizen-title: "<white>Citizen"
 
+  # Nation command messages
+  player-already-in-nation: "<red>This player is already in a nation.</red>"
+  invite:
+    sent: "<green>Invitation sent to <gold>{player}</gold></green>"
+    received: "<green>You've been invited to join the nation: <gold>{nation}</gold></green>"
+    join-instructions: "<green>To accept, type: <white>/nation join {nation}</white></green>"
+    expiration: "<green>Invitation expires in 1 minute.</green>"
+    expired: "<red>The invitation to join {nation} has expired.</red>"
+
 # Chunk related messages
 chunk:
   claimed: "<green>Chunk claimed for nation <gold>{nation}</gold>!</green>"

@@ -70,7 +70,7 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
                 targetPlayer.getUniqueId().toString());
 
         if (targetSovereigntyPlayer != null && targetSovereigntyPlayer.hasNation()) {
-            player.sendMessage("§cThis player is already in a nation.");
+            player.sendMessage(plugin.getLocalizationManager().getComponent("nation.player-already-in-nation"));
             return true;
         }
 
@@ -81,10 +81,13 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
         pendingInvites.put(targetUuid, invite);
 
         // Send messages
-        player.sendMessage("§aInvitation sent to " + targetPlayer.getName());
-        targetPlayer.sendMessage("§aYou've been invited to join the nation: §6" + nation.getName());
-        targetPlayer.sendMessage("§aTo accept, type: §f/nation join " + nation.getName());
-        targetPlayer.sendMessage("§aInvitation expires in 1 minute.");
+        player.sendMessage(
+                plugin.getLocalizationManager().getComponent("nation.invite.sent", "player", targetPlayer.getName()));
+        targetPlayer.sendMessage(
+                plugin.getLocalizationManager().getComponent("nation.invite.received", "nation", nation.getName()));
+        targetPlayer.sendMessage(plugin.getLocalizationManager().getComponent("nation.invite.join-instructions",
+                "nation", nation.getName()));
+        targetPlayer.sendMessage(plugin.getLocalizationManager().getComponent("nation.invite.expiration"));
 
         // Schedule expiration
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -93,7 +96,8 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
                 pendingInvites.remove(targetUuid);
                 Player target = Bukkit.getPlayer(targetUuid);
                 if (target != null && target.isOnline()) {
-                    target.sendMessage("§cThe invitation to join " + nation.getName() + " has expired.");
+                    target.sendMessage(plugin.getLocalizationManager().getComponent("nation.invite.expired", "nation",
+                            nation.getName()));
                 }
             }
         }, 1200); // 60 seconds * 20 ticks
