@@ -104,7 +104,8 @@ public class DatabaseManager {
     }
 
     public DSLContext createContext() throws SQLException {
-        return DSL.using(getConnection(), sqlDialect);
+        Connection conn = getConnection();
+        return DSL.using(conn, sqlDialect);
     }
 
     public void shutdown() {

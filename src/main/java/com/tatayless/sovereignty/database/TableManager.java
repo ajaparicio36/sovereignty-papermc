@@ -40,7 +40,6 @@ public class TableManager {
     }
 
     private void createMySQLTables(DSLContext context) {
-        // Nations table
         context.execute("CREATE TABLE IF NOT EXISTS nations (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "name VARCHAR(64) NOT NULL UNIQUE, " +
@@ -58,7 +57,6 @@ public class TableManager {
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
                 ")");
 
-        // Players table
         context.execute("CREATE TABLE IF NOT EXISTS players (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "name VARCHAR(36) NOT NULL UNIQUE, " +
@@ -70,7 +68,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE SET NULL" +
                 ")");
 
-        // Nation Vault table
         context.execute("CREATE TABLE IF NOT EXISTS nation_vaults (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "nation_id VARCHAR(36) NOT NULL UNIQUE, " +
@@ -82,7 +79,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trades table
         context.execute("CREATE TABLE IF NOT EXISTS trades (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "sending_nation_id VARCHAR(36) NOT NULL, " +
@@ -98,7 +94,6 @@ public class TableManager {
                 "FOREIGN KEY (receiving_nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trade Vaults table
         context.execute("CREATE TABLE IF NOT EXISTS trade_vaults (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "trade_id VARCHAR(36) NOT NULL UNIQUE, " +
@@ -111,7 +106,6 @@ public class TableManager {
                 "FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE" +
                 ")");
 
-        // Vault NPC table - NPCs for accessing nation vaults
         context.execute("CREATE TABLE IF NOT EXISTS vault_npcs (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "nation_id VARCHAR(36) NOT NULL UNIQUE, " +
@@ -124,7 +118,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_vault_id) REFERENCES nation_vaults(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trade Vault NPC table - NPCs for accessing trade vaults
         context.execute("CREATE TABLE IF NOT EXISTS trade_vault_npcs (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "trade_id VARCHAR(36) NOT NULL, " +
@@ -138,7 +131,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Wars table
         context.execute("CREATE TABLE IF NOT EXISTS wars (" +
                 "id VARCHAR(36) PRIMARY KEY, " +
                 "attacker_nation_id VARCHAR(36) NOT NULL, " +
@@ -159,7 +151,6 @@ public class TableManager {
     }
 
     private void createSQLiteTables(DSLContext context) {
-        // Nations table
         context.execute("CREATE TABLE IF NOT EXISTS nations (" +
                 "id TEXT PRIMARY KEY, " +
                 "name TEXT NOT NULL UNIQUE, " +
@@ -177,7 +168,6 @@ public class TableManager {
                 "updated_at TEXT DEFAULT (datetime('now'))" +
                 ")");
 
-        // Players table
         context.execute("CREATE TABLE IF NOT EXISTS players (" +
                 "id TEXT PRIMARY KEY, " +
                 "name TEXT NOT NULL UNIQUE, " +
@@ -189,7 +179,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE SET NULL" +
                 ")");
 
-        // Nation Vault table
         context.execute("CREATE TABLE IF NOT EXISTS nation_vaults (" +
                 "id TEXT PRIMARY KEY, " +
                 "nation_id TEXT NOT NULL UNIQUE, " +
@@ -201,7 +190,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trades table
         context.execute("CREATE TABLE IF NOT EXISTS trades (" +
                 "id TEXT PRIMARY KEY, " +
                 "sending_nation_id TEXT NOT NULL, " +
@@ -217,7 +205,6 @@ public class TableManager {
                 "FOREIGN KEY (receiving_nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trade Vaults table
         context.execute("CREATE TABLE IF NOT EXISTS trade_vaults (" +
                 "id TEXT PRIMARY KEY, " +
                 "trade_id TEXT NOT NULL UNIQUE, " +
@@ -230,7 +217,6 @@ public class TableManager {
                 "FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE" +
                 ")");
 
-        // Vault NPC table - NPCs for accessing nation vaults
         context.execute("CREATE TABLE IF NOT EXISTS vault_npcs (" +
                 "id TEXT PRIMARY KEY, " +
                 "nation_id TEXT NOT NULL UNIQUE, " +
@@ -243,7 +229,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_vault_id) REFERENCES nation_vaults(id) ON DELETE CASCADE" +
                 ")");
 
-        // Trade Vault NPC table - NPCs for accessing trade vaults
         context.execute("CREATE TABLE IF NOT EXISTS trade_vault_npcs (" +
                 "id TEXT PRIMARY KEY, " +
                 "trade_id TEXT NOT NULL, " +
@@ -257,7 +242,6 @@ public class TableManager {
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE" +
                 ")");
 
-        // Wars table
         context.execute("CREATE TABLE IF NOT EXISTS wars (" +
                 "id TEXT PRIMARY KEY, " +
                 "attacker_nation_id TEXT NOT NULL, " +
@@ -276,7 +260,6 @@ public class TableManager {
                 "FOREIGN KEY (winner_id) REFERENCES nations(id) ON DELETE SET NULL" +
                 ")");
 
-        // Create triggers for all tables to handle updated_at
         String[] tables = { "nations", "players", "nation_vaults", "trades", "trade_vaults",
                 "vault_npcs", "trade_vault_npcs", "wars" };
         for (String table : tables) {
