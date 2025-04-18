@@ -163,6 +163,28 @@ public class TradeService {
         }
     }
 
+    /**
+     * Starts the trade execution task that runs periodically to check and execute
+     * trades.
+     * This method should be called during plugin startup.
+     */
+    public void startTradeExecutionTask() {
+        scheduleTradeProcessing();
+    }
+
+    /**
+     * Gets all trades associated with a specific nation.
+     * 
+     * @param nationId the nation ID to get trades for
+     * @return List of Trade objects where the nation is either sending or receiving
+     */
+    public List<Trade> getNationTrades(String nationId) {
+        return activeTrades.values().stream()
+                .filter(trade -> trade.getSendingNationId().equals(nationId) ||
+                        trade.getReceivingNationId().equals(nationId))
+                .collect(Collectors.toList());
+    }
+
     // UI-related methods - delegate to UIHandler
     public void openTradeCreationMenu(Player player, String senderNationId, String receiverNationId, int interval) {
         uiHandler.openTradeCreationMenu(player, senderNationId, receiverNationId, interval);
@@ -312,6 +334,48 @@ public class TradeService {
                     return false;
 
                 return record.get("is_for_sender", Integer.class) == 1;
+            }
+        });
+    }
+
+    // For compatibility with older code - can be removed after refactoring
+    // TradeStatus enum for backward compatibility
+    public enum TradeStatus {
+        ACTIVE, PENDING, CANCELLED, COMPLETED;
+
+        public Trade.Status toModelStatus() {
+            return Trade.Status.valueOf(this.name());
+        }
+
+        public static TradeStatus fromModelStatus(Trade.Status status) {
+            return TradeStatus.valueOf(status.name());
+        }
+    }
+
+    /**
+     * Activates a pending trade.
+     * 
+     * @param tradeId The ID of the trade to activate
+     * @return true if the trade was activated, false if it doesn't exist or isn't
+     *         pending
+     */
+    public boolean activateTrade(String tradeId) {
+        Trade trade = activeTrades.get(tradeId);
+        if (trade == null || trade.getStatus() != Trade.Status.PENDING) {
+            return false;
+        }
+
+        trade.setStatus(Trade.Status.ACTIVE);
+
+        // Update in database
+        return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+            @Override
+            public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                int updated = context.update(DSL.table("trades"))
+                        .set(DSL.field("status"), "active")
+                        .where(DSL.field("id").eq(tradeId))
+                        .execute();
+                return updated > 0;
             }
         });
     }

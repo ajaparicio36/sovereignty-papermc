@@ -2,6 +2,7 @@ package com.tatayless.sovereignty.services;
 
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.models.Nation;
+import com.tatayless.sovereignty.models.Trade;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -64,9 +65,9 @@ public class PowerService {
         power += Math.min(allianceCount * 0.1, 1.5);
 
         // +0.05 for every 3 consecutive fulfilled trades
-        List<TradeService.Trade> trades = tradeService.getNationTrades(nationId);
-        for (TradeService.Trade trade : trades) {
-            if (trade.getStatus() == TradeService.TradeStatus.ACTIVE) {
+        List<Trade> trades = tradeService.getNationTrades(nationId);
+        for (Trade trade : trades) {
+            if (trade.getStatus() == Trade.Status.ACTIVE) {
                 power += (trade.getConsecutiveTrades() / 3) * 0.05;
             }
         }
