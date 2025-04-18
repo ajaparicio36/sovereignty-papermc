@@ -80,6 +80,10 @@ public class Nation {
         return annexedChunks.add(chunk);
     }
 
+    public boolean removeAnnexedChunk(ChunkLocation chunk) {
+        return annexedChunks.remove(chunk);
+    }
+
     public Set<String> getAlliances() {
         return Collections.unmodifiableSet(alliances);
     }

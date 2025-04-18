@@ -118,6 +118,12 @@ public class ConfigManager {
         return config.getBoolean("war.enable-assassination", false);
     }
 
+    public double getAnnexationPercentage() {
+        double percentage = config.getDouble("war.annexation-percentage", 0.25);
+        // Ensure value is between 0 and 1
+        return Math.max(0.0, Math.min(1.0, percentage));
+    }
+
     // Vault Settings
     public int getNationVaultRows() {
         return config.getInt("vaults.nation-vault-rows", 3);

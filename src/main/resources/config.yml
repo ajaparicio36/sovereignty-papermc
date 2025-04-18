@@ -49,6 +49,9 @@ war:
   # Enable assassination mode (killing president instantly wins war)
   enable-assassination: false
 
+  # Percentage of chunks to annex from loser after war (0.0-1.0)
+  annexation-percentage: 0.25
+
   # How often power should recalculate (in minutes)
   power-recalculation-interval: 10
 

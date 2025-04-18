@@ -299,7 +299,15 @@ public class NationService {
             return CompletableFuture.completedFuture(false);
         }
 
-        nation.removeClaimedChunk(chunkLocation);
+        // Check if it's a claimed or annexed chunk
+        boolean isAnnexed = nation.getAnnexedChunks().contains(chunkLocation);
+
+        if (isAnnexed) {
+            nation.removeAnnexedChunk(chunkLocation);
+        } else {
+            nation.removeClaimedChunk(chunkLocation);
+        }
+
         chunkOwners.remove(chunkLocation);
 
         return saveNation(nation);

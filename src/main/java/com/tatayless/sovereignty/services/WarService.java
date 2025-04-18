@@ -2,6 +2,7 @@ package com.tatayless.sovereignty.services;
 
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.DatabaseOperation;
+import com.tatayless.sovereignty.models.ChunkLocation;
 import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.SovereigntyPlayer;
 import net.kyori.adventure.text.Component;
@@ -23,6 +24,7 @@ public class WarService {
     private final NationService nationService;
     private final PlayerService playerService;
     private final Map<String, War> activeWars = new HashMap<>();
+    private final Map<ChunkLocation, String> chunkOwners = new HashMap<>();
 
     public WarService(Sovereignty plugin, NationService nationService, PlayerService playerService) {
         this.plugin = plugin;
@@ -139,6 +141,7 @@ public class WarService {
         Nation attackerNation = nationService.getNation(war.getAttackerNationId());
         Nation defenderNation = nationService.getNation(war.getDefenderNationId());
         Nation winner = nationService.getNation(winnerId);
+        Nation loser = winnerId.equals(attackerNation.getId()) ? defenderNation : attackerNation;
 
         if (attackerNation == null || defenderNation == null || winner == null) {
             return CompletableFuture.completedFuture(false);
@@ -166,6 +169,9 @@ public class WarService {
                     defenderNation.setPower(defenderNation.getPower() + 1.0);
                 }
 
+                // Annex chunks from the loser
+                annexChunks(winner, loser);
+
                 nationService.saveNation(attackerNation);
                 nationService.saveNation(defenderNation);
 
@@ -189,6 +195,59 @@ public class WarService {
                 return false;
             }
         });
+    }
+
+    /**
+     * Annexes a portion of the loser's chunks to the winner's territory
+     * 
+     * @param winner The nation that won the war
+     * @param loser  The nation that lost the war
+     */
+    private void annexChunks(Nation winner, Nation loser) {
+        Set<ChunkLocation> loserChunks = new HashSet<>(loser.getClaimedChunks());
+        if (loserChunks.isEmpty()) {
+            return; // No chunks to annex
+        }
+
+        // Calculate how many chunks to annex (e.g., 25% of loser's chunks)
+        int annexCount = Math.max(1, (int) (loserChunks.size() * plugin.getConfigManager().getAnnexationPercentage()));
+        annexCount = Math.min(annexCount, loserChunks.size()); // Don't try to annex more chunks than available
+
+        // Convert to list for easier selection
+        List<ChunkLocation> chunkList = new ArrayList<>(loserChunks);
+        Collections.shuffle(chunkList); // Randomize the chunks to annex
+
+        // Annex the chunks
+        int annexed = 0;
+        for (ChunkLocation chunk : chunkList) {
+            if (annexed >= annexCount)
+                break;
+
+            // Remove chunk from loser's claimed chunks
+            loser.removeClaimedChunk(chunk);
+
+            // Add to winner's annexed chunks
+            winner.addAnnexedChunk(chunk);
+
+            // Update chunk owner in the chunk map
+            chunkOwners.put(chunk, winner.getId());
+
+            annexed++;
+        }
+
+        // Notify players about annexation
+        if (annexed > 0) {
+            Component message = plugin.getLocalizationManager().getComponent(
+                    "war.chunks-annexed",
+                    "winner", winner.getName(),
+                    "loser", loser.getName(),
+                    "count", String.valueOf(annexed));
+
+            notifyNationPlayers(winner.getId(), message);
+            notifyNationPlayers(loser.getId(), message);
+
+            plugin.getLogger().info(annexed + " chunks annexed from " + loser.getName() + " to " + winner.getName());
+        }
     }
 
     public CompletableFuture<Boolean> cancelWar(String warId) {
