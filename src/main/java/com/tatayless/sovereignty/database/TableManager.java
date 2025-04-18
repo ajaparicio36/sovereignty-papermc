@@ -46,6 +46,7 @@ public class TableManager {
                 "name VARCHAR(64) NOT NULL UNIQUE, " +
                 "power INT NOT NULL DEFAULT 0, " +
                 "claimed_chunks JSON, " +
+                "alliances JSON, " +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
                 ")");
@@ -151,6 +152,7 @@ public class TableManager {
                 "name TEXT NOT NULL UNIQUE, " +
                 "power INTEGER NOT NULL DEFAULT 0, " +
                 "claimed_chunks TEXT, " + // JSON array stored as TEXT in SQLite
+                "alliances TEXT, " + // JSON array stored as TEXT in SQLite
                 "created_at TEXT DEFAULT (datetime('now')), " +
                 "updated_at TEXT DEFAULT (datetime('now'))" +
                 ")");
