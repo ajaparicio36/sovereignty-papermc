@@ -17,6 +17,7 @@ public class DatabaseManager {
     private final ConfigManager configManager;
     private HikariDataSource dataSource;
     private SQLDialect sqlDialect;
+    private TableManager tableManager;
 
     public DatabaseManager(Sovereignty plugin, ConfigManager configManager) {
         this.plugin = plugin;
@@ -25,6 +26,7 @@ public class DatabaseManager {
 
     public void initialize() throws SQLException {
         setupDataSource();
+        tableManager = new TableManager(plugin, configManager.isMySQL());
         createTablesIfNotExist();
     }
 
@@ -88,56 +90,13 @@ public class DatabaseManager {
         try {
             conn = getConnection();
             DSLContext context = DSL.using(conn, sqlDialect);
-
-            if (configManager.isMySQL()) {
-                createMySQLTables(context);
-            } else {
-                createSQLiteTables(context);
-            }
+            tableManager.createTables(context);
         } finally {
             // Manually close the connection
             if (conn != null && !conn.isClosed()) {
                 conn.close();
             }
         }
-    }
-
-    private void createMySQLTables(DSLContext context) {
-        // MySQL version of tables with proper timestamp syntax
-        context.execute("CREATE TABLE IF NOT EXISTS sovereignty_nations (" +
-                "id INTEGER PRIMARY KEY AUTO_INCREMENT, " +
-                "name VARCHAR(64) NOT NULL UNIQUE, " +
-                "description TEXT, " +
-                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
-                ")");
-
-        context.execute("CREATE TABLE IF NOT EXISTS sovereignty_players (" +
-                "uuid VARCHAR(36) PRIMARY KEY, " +
-                "player_name VARCHAR(16) NOT NULL, " +
-                "nation_id INTEGER, " +
-                "joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                "last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                "FOREIGN KEY (nation_id) REFERENCES sovereignty_nations(id) ON DELETE SET NULL" +
-                ")");
-    }
-
-    private void createSQLiteTables(DSLContext context) {
-        // SQLite version of tables with proper timestamp handling
-        context.execute("CREATE TABLE IF NOT EXISTS sovereignty_nations (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "name VARCHAR(64) NOT NULL UNIQUE, " +
-                "description TEXT, " +
-                "created_at TEXT DEFAULT (datetime('now', 'localtime'))" +
-                ")");
-
-        context.execute("CREATE TABLE IF NOT EXISTS sovereignty_players (" +
-                "uuid VARCHAR(36) PRIMARY KEY, " +
-                "player_name VARCHAR(16) NOT NULL, " +
-                "nation_id INTEGER, " +
-                "joined_at TEXT DEFAULT (datetime('now', 'localtime')), " +
-                "last_login TEXT DEFAULT (datetime('now', 'localtime')), " +
-                "FOREIGN KEY (nation_id) REFERENCES sovereignty_nations(id) ON DELETE SET NULL" +
-                ")");
     }
 
     public Connection getConnection() throws SQLException {
