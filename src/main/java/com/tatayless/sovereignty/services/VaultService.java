@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class VaultService {
     private final Sovereignty plugin;
@@ -135,6 +136,7 @@ public class VaultService {
                     return null;
                 }
             });
+
         });
     }
 
@@ -347,6 +349,7 @@ public class VaultService {
                     return newVault;
                 }
             });
+
         });
     }
 
@@ -487,7 +490,7 @@ public class VaultService {
         });
     }
 
-    public CompletableFuture<Boolean> createVaultNPC(String nationId, Location location, String playerId) {
+    public CompletableFuture<Boolean> createOrMoveVaultNPC(String nationId, Location location, String playerId) {
         Nation nation = nationService.getNation(nationId);
         if (nation == null || !nation.isOfficer(playerId)) {
             return CompletableFuture.completedFuture(false);
@@ -498,56 +501,197 @@ public class VaultService {
                 return CompletableFuture.completedFuture(false);
             }
 
-            return CompletableFuture.supplyAsync(() -> {
-                return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+            // Check if the nation already has an NPC
+            Integer existingEntityId = getVaultNPCEntityId(nationId);
+
+            if (existingEntityId != null) {
+                // Move the existing NPC to the new location
+                return moveVaultNPC(existingEntityId, location);
+            } else {
+                // Create a new NPC
+                return createNewVaultNPC(vault, nationId, location);
+            }
+        });
+    }
+
+    private CompletableFuture<Boolean> moveVaultNPC(int entityId, Location location) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                CompletableFuture<Void> future = new CompletableFuture<>();
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    for (org.bukkit.entity.Entity entity : Bukkit.getWorlds().stream()
+                            .flatMap(world -> world.getEntities().stream())
+                            .collect(Collectors.toList())) {
+                        if (entity.getEntityId() == entityId && entity instanceof Villager) {
+                            entity.teleport(location);
+                            break;
+                        }
+                    }
+                    future.complete(null);
+                });
+                future.get(); // Wait for task to complete
+
+                // Update location in database
+                String vaultId = entityToVault.get(entityId);
+                if (vaultId != null) {
+                    plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                        @Override
+                        public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                            String locationStr = String.format("%f,%f,%f,%s",
+                                    location.getX(), location.getY(), location.getZ(),
+                                    location.getWorld().getName());
+
+                            context.update(DSL.table("vault_npcs"))
+                                    .set(DSL.field("coordinates"), locationStr)
+                                    .where(DSL.field("entity_id").eq(entityId))
+                                    .execute();
+
+                            return true;
+                        }
+                    });
+                }
+
+                return true;
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to move vault NPC: " + e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    private CompletableFuture<Boolean> createNewVaultNPC(NationVault vault, String nationId, Location location) {
+        return CompletableFuture.supplyAsync(() -> {
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    Nation nation = nationService.getNation(nationId);
+                    if (nation == null)
+                        return false;
+
+                    // Create the NPC entity
+                    final Villager[] npc = { null };
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        npc[0] = (Villager) location.getWorld().spawnEntity(location, EntityType.VILLAGER);
+
+                        // Create stylized name for the vault NPC
+                        net.kyori.adventure.text.Component nameComponent = net.kyori.adventure.text.Component
+                                .text(nation.getName() + " ")
+                                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
+                                .append(net.kyori.adventure.text.Component
+                                        .text("Vault")
+                                        .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
+                                        .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
+
+                        npc[0].customName(nameComponent);
+                        npc[0].setCustomNameVisible(true);
+                        npc[0].setProfession(Villager.Profession.LIBRARIAN);
+                        npc[0].setAI(false);
+                        npc[0].setInvulnerable(true);
+                        npc[0].setSilent(true);
+                    });
+
+                    // Wait for entity to be created
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new SQLException("Thread interrupted", e);
+                    }
+
+                    // Store the NPC in database
+                    int entityId = npc[0].getEntityId();
+                    String npcId = UUID.randomUUID().toString();
+                    String locationStr = String.format("%f,%f,%f,%s",
+                            location.getX(), location.getY(), location.getZ(), location.getWorld().getName());
+
+                    context.insertInto(
+                            DSL.table("vault_npcs"),
+                            DSL.field("id"),
+                            DSL.field("nation_id"),
+                            DSL.field("nation_vault_id"),
+                            DSL.field("coordinates"),
+                            DSL.field("entity_id")).values(
+                                    npcId,
+                                    nationId,
+                                    vault.getId(),
+                                    locationStr,
+                                    entityId)
+                            .execute();
+
+                    entityToVault.put(entityId, vault.getId());
+                    return true;
+                }
+            });
+        });
+    }
+
+    public CompletableFuture<Boolean> removeVaultNPC(String nationId) {
+        Integer entityId = getVaultNPCEntityId(nationId);
+        if (entityId == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Remove the entity
+                CompletableFuture<Void> future = new CompletableFuture<>();
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    for (org.bukkit.entity.Entity entity : Bukkit.getWorlds().stream()
+                            .flatMap(world -> world.getEntities().stream())
+                            .collect(Collectors.toList())) {
+                        if (entity.getEntityId() == entityId) {
+                            entity.remove();
+                            break;
+                        }
+                    }
+                    future.complete(null);
+                });
+                future.get(); // Wait for task to complete
+
+                // Remove from database
+                plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
                     @Override
                     public Boolean execute(Connection conn, DSLContext context) throws SQLException {
-                        // Create the NPC entity
-                        final Villager[] npc = { null };
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            npc[0] = (Villager) location.getWorld().spawnEntity(location, EntityType.VILLAGER);
-                            npc[0].customName(net.kyori.adventure.text.Component.text("Vault: " + nation.getName()));
-                            npc[0].setCustomNameVisible(true);
-                            npc[0].setProfession(Villager.Profession.LIBRARIAN);
-                            npc[0].setAI(false);
-                            npc[0].setInvulnerable(true);
-                            npc[0].setSilent(true);
-                        });
-
-                        // Wait for entity to be created
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            throw new SQLException("Thread interrupted", e);
-                        }
-
-                        // Store the NPC in database
-                        int entityId = npc[0].getEntityId();
-                        String npcId = UUID.randomUUID().toString();
-                        String locationStr = String.format("%f,%f,%f,%s",
-                                location.getX(), location.getY(), location.getZ(), location.getWorld().getName());
-
-                        context.insertInto(
-                                DSL.table("vault_npcs"),
-                                DSL.field("id"),
-                                DSL.field("nation_id"),
-                                DSL.field("nation_vault_id"),
-                                DSL.field("coordinates"),
-                                DSL.field("entity_id")).values(
-                                        npcId,
-                                        nationId,
-                                        vault.getId(),
-                                        locationStr,
-                                        entityId)
+                        context.deleteFrom(DSL.table("vault_npcs"))
+                                .where(DSL.field("nation_id").eq(nationId))
                                 .execute();
-
-                        entityToVault.put(entityId, vault.getId());
                         return true;
                     }
                 });
-            });
+
+                // Remove from tracking map
+                entityToVault.remove(entityId);
+
+                return true;
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to remove vault NPC: " + e.getMessage());
+                return false;
+            }
         });
+    }
+
+    public Integer getVaultNPCEntityId(String nationId) {
+        for (Map.Entry<Integer, String> entry : entityToVault.entrySet()) {
+            String vaultId = entry.getValue();
+            NationVault vault = findVaultById(vaultId);
+            if (vault != null && vault.getNationId().equals(nationId)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private NationVault findVaultById(String vaultId) {
+        for (NationVault vault : nationVaults.values()) {
+            if (vault.getId().equals(vaultId)) {
+                return vault;
+            }
+        }
+        return null;
+    }
+
+    public boolean hasVaultNPC(String nationId) {
+        return getVaultNPCEntityId(nationId) != null;
     }
 
     public String getVaultIdFromEntity(int entityId) {

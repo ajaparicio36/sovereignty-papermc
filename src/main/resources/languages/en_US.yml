@@ -195,8 +195,10 @@ vault:
   no-vault: "<red>Your nation doesn't have a vault.</red>"
   trade-opened: "<green>Opening trade vault for <gold>{nation}</gold>...</green>"
   npc-created: "<green>Vault NPC created for your nation.</green>"
+  npc-creation-failed: "<red>Failed to create vault NPC. Please try again later."
   trade-npc-created: "<green>Trade Vault NPC created for trade with <gold>{nation}</gold>.</green>"
   npc-removed: "<red>Vault NPC removed!"
+  npc-removal-failed: "<red>Failed to remove vault NPC. Please try again later."
   npc-accessed: "<gray>Accessing vault for nation {name}!"
 
 # Help messages
