@@ -56,9 +56,9 @@ public class UnclaimCommand implements NationCommandExecutor.SubCommand {
         if (args.length > 0 && args[0].equalsIgnoreCase("toggle")) {
             boolean isActive = toggleManager.toggleAutoUnclaim(player);
             if (isActive) {
-                player.sendMessage("§aAuto-unclaim mode enabled. Walk into chunks to unclaim them automatically.");
+                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.enabled"));
             } else {
-                player.sendMessage("§cAuto-unclaim mode disabled.");
+                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-unclaim.disabled"));
             }
             return true;
         }

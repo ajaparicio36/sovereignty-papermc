@@ -49,8 +49,8 @@ public class DisbandCommand implements NationCommandExecutor.SubCommand {
 
         // Add confirmation
         if (args.length == 0 || !args[0].equalsIgnoreCase("confirm")) {
-            player.sendMessage("§cThis will permanently disband your nation! All land claims will be lost.");
-            player.sendMessage("§cTo confirm, type: §f/nation disband confirm");
+            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.confirm-disband"));
+            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.confirm-disband-command"));
             return true;
         }
 
@@ -61,7 +61,7 @@ public class DisbandCommand implements NationCommandExecutor.SubCommand {
                         "nation.disbanded",
                         "name", nation.getName()));
             } else {
-                player.sendMessage("§cFailed to disband nation. Please try again later.");
+                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.disband-failed"));
             }
         });
 

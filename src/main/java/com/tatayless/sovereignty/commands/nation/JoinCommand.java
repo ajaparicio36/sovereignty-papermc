@@ -55,7 +55,9 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
         Nation nation = plugin.getServiceManager().getNationService().getNationByName(nationName);
 
         if (nation == null) {
-            player.sendMessage("§cNation not found: " + nationName);
+            player.sendMessage(plugin.getLocalizationManager().getMessage(
+                    "nation.nation-not-found",
+                    "nation", nationName));
             return true;
         }
 
@@ -70,7 +72,7 @@ public class JoinCommand implements NationCommandExecutor.SubCommand {
         }
 
         if (inviteCommand == null || !inviteCommand.hasInvite(player.getUniqueId(), nation.getId())) {
-            player.sendMessage("§cYou don't have an invitation to join this nation.");
+            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.invite.no-invitation"));
             return true;
         }
 

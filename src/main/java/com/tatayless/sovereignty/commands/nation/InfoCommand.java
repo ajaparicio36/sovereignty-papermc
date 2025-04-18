@@ -54,7 +54,9 @@ public class InfoCommand implements NationCommandExecutor.SubCommand {
             nation = nationService.getNationByName(nationName);
 
             if (nation == null) {
-                player.sendMessage("§cNation not found: " + nationName);
+                player.sendMessage(plugin.getLocalizationManager().getMessage(
+                        "nation.nation-not-found",
+                        "nation", nationName));
                 return true;
             }
         }

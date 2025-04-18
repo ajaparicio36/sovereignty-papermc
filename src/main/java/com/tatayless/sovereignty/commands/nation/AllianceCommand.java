@@ -47,10 +47,13 @@ public class AllianceCommand implements NationCommandExecutor.SubCommand {
         if (args.length < 1) {
             // Display help message
             player.sendMessage(
-                    plugin.getLocalizationManager().getMessage("alliance.help-header", "§6--- Alliance Commands ---"));
+                    plugin.getLocalizationManager().getMessage("alliance.help-header"));
             for (NationCommandExecutor.SubCommand subcommand : subcommands) {
                 player.sendMessage(
-                        "§f/nation alliance " + subcommand.getName() + " §7- " + subcommand.getDescription());
+                        plugin.getLocalizationManager().getMessage("help.nation-command",
+                                "command", "nation alliance",
+                                "subcommand", subcommand.getName(),
+                                "description", subcommand.getDescription()));
             }
             return true;
         }
@@ -64,8 +67,7 @@ public class AllianceCommand implements NationCommandExecutor.SubCommand {
             }
         }
 
-        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.unknown-subcommand",
-                "Unknown alliance subcommand"));
+        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.unknown-subcommand"));
         return true;
     }
 

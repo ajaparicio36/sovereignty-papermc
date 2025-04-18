@@ -44,7 +44,7 @@ public class LeaveCommand implements NationCommandExecutor.SubCommand {
 
         // Presidents cannot leave their nation, they must disband it
         if (nation.getPresidentId().equals(playerId)) {
-            player.sendMessage("§cAs the president, you cannot leave your nation. Use §f/nation disband §cinstead.");
+            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.president-cant-leave"));
             return true;
         }
 

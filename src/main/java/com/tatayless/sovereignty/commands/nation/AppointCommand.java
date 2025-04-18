@@ -54,7 +54,9 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
         Player targetPlayer = Bukkit.getPlayer(targetName);
 
         if (targetPlayer == null) {
-            player.sendMessage("§cPlayer not found: " + targetName);
+            player.sendMessage(plugin.getLocalizationManager().getMessage(
+                    "nation.player-not-found",
+                    "player", targetName));
             return true;
         }
 
@@ -63,7 +65,7 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
 
         if (targetSovPlayer == null || !targetSovPlayer.hasNation() ||
                 !targetSovPlayer.getNationId().equals(nation.getId())) {
-            player.sendMessage("§cThis player is not a member of your nation.");
+            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.player-not-member"));
             return true;
         }
 
@@ -91,14 +93,14 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
                 break;
 
             default:
-                player.sendMessage("§cInvalid role. Valid roles: senator, soldier");
+                player.sendMessage(plugin.getLocalizationManager().getMessage("nation.invalid-role"));
                 return true;
         }
 
         // Check if player already has this role
         if ((role == Nation.Role.SENATOR && nation.getSenators().contains(targetId)) ||
                 (role == Nation.Role.SOLDIER && nation.getSoldiers().contains(targetId))) {
-            player.sendMessage("§cThis player already has this role.");
+            player.sendMessage(plugin.getLocalizationManager().getMessage("nation.already-has-role"));
             return true;
         }
 
@@ -131,8 +133,14 @@ public class AppointCommand implements NationCommandExecutor.SubCommand {
         plugin.getServiceManager().getNationService().saveNation(nation);
 
         // Send messages
-        player.sendMessage("§aYou appointed §f" + targetPlayer.getName() + "§a as a §f" + roleArg + "§a.");
-        targetPlayer.sendMessage("§aYou have been appointed as a §f" + roleArg + "§a in your nation!");
+        player.sendMessage(plugin.getLocalizationManager().getMessage(
+                "nation.appointed",
+                "player", targetPlayer.getName(),
+                "role", roleArg));
+
+        targetPlayer.sendMessage(plugin.getLocalizationManager().getMessage(
+                "nation.been-appointed",
+                "role", roleArg));
 
         return true;
     }

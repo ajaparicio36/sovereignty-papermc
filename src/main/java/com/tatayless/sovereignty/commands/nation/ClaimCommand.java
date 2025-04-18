@@ -56,9 +56,9 @@ public class ClaimCommand implements NationCommandExecutor.SubCommand {
         if (args.length > 0 && args[0].equalsIgnoreCase("toggle")) {
             boolean isActive = toggleManager.toggleAutoClaim(player);
             if (isActive) {
-                player.sendMessage("§aAuto-claim mode enabled. Walk into chunks to claim them automatically.");
+                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.enabled"));
             } else {
-                player.sendMessage("§cAuto-claim mode disabled.");
+                player.sendMessage(plugin.getLocalizationManager().getMessage("auto-claim.disabled"));
             }
             return true;
         }

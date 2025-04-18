@@ -37,6 +37,18 @@ nation:
   power-gained: "<green>Your nation gained {amount} power!"
   power-lost: "<red>Your nation lost {amount} power!"
   power-level-up: "<green>Your nation has reached power level {level}!"
+  confirm-disband: "<red>This will permanently disband your nation! All land claims will be lost."
+  confirm-disband-command: "<red>To confirm, type: <white>/nation disband confirm</white>"
+  disband-failed: "<red>Failed to disband nation. Please try again later."
+  president-cant-leave: "<red>As the president, you cannot leave your nation. Use <white>/nation disband</white> instead."
+  player-not-found: "<red>Player not found or offline: {player}"
+  player-not-member: "<red>This player is not a member of your nation."
+  appointed: "<green>You appointed <white>{player}</white> as a <white>{role}</white>."
+  been-appointed: "<green>You have been appointed as a <white>{role}</white> in your nation!"
+  already-has-role: "<red>This player already has this role."
+  invalid-role: "<red>Invalid role. Valid roles: senator, soldier"
+  nation-not-found: "<red>Nation not found: {nation}"
+  error: "<red>An error occurred while accessing nation data."
 
   # Roles
   role-assigned: "<green>{player} has been assigned the role of {role}!"
@@ -69,6 +81,22 @@ chunk:
   entered: "<gray>You have entered the territory of {name}!"
   exited: "<gray>You have exited the territory of {name}!"
 
+# Auto-claim/unclaim messages
+auto-claim:
+  enabled: "<green>Auto-claim mode enabled. Walk into chunks to claim them automatically."
+  disabled: "<red>Auto-claim mode disabled."
+  not-in-nation: "<red>Auto-claim has been disabled because you are not in a nation."
+  not-officer: "<red>Auto-claim has been disabled because you are not an officer."
+  max-reached: "<red>Auto-claim has been disabled because you reached the maximum of {max} chunks."
+  chunk-claimed: "<green>[Auto-claim] Chunk claimed ({current}/{max})"
+
+auto-unclaim:
+  enabled: "<green>Auto-unclaim mode enabled. Walk into chunks to unclaim them automatically."
+  disabled: "<red>Auto-unclaim mode disabled."
+  not-in-nation: "<red>Auto-unclaim has been disabled because you are not in a nation."
+  not-officer: "<red>Auto-unclaim has been disabled because you are not an officer."
+  chunk-unclaimed: "<green>[Auto-unclaim] Chunk unclaimed"
+
 # War related messages
 war:
   declared: "<red>Your nation has declared war on <gold>{nation}</gold>!</red>"
@@ -83,6 +111,31 @@ war:
   cancelled: "<green>The war has been cancelled by an administrator.</green>"
   soldier-killed: "<gray>{player} has been killed in the war! ({current}/{max} lives left)"
   president-assassinated: "<red>The president of {nation} has been assassinated! The war is over!"
+  # Adding new war command messages
+  declare-usage: "<red>Usage: /war declare <nation>"
+  nation-not-found: "<red>Nation '{nation}' not found."
+  declare-failed: "<red>Failed to declare war."
+  all-active-wars-header: "<gold>--- All Active Wars ---</gold>"
+  your-nation-wars-header: "<gold>--- Your Nation's Wars ---</gold>"
+  no-active-wars: "<gray>No active wars."
+  war-status-format: "<white>{attacker} <gray>vs <white>{defender} <gray>- Kills: <red>{attackerKills}</red><gray>/<green>{defenderKills}</green> <gray>(Required: <gold>{requiredKills}</gold>)"
+  info-usage: "<red>Usage: /war info <nation1> <nation2>"
+  nation-no-wars: "<gray>Nation '{nation}' is not involved in any wars."
+  wars-involving-header: "<gold>--- Wars involving {nation} ---</gold>"
+  no-war-between-nations: "<gray>There is no active war between {nation1} and {nation2}."
+  war-details-header: "<gold>--- War Details ---</gold>"
+  war-details-attacker: "<white>Attacker: <green>{nation}</green>"
+  war-details-defender: "<white>Defender: <red>{nation}</red>"
+  war-details-attacker-kills: "<white>Attacker Kills: <green>{kills}</green>"
+  war-details-defender-kills: "<white>Defender Kills: <red>{kills}</red>"
+  war-details-required-kills: "<white>Kills Required: <gold>{kills}</gold>"
+  cancel-usage: "<red>Usage: /war cancel <id or nation1 nation2>"
+  cancel-failed: "<red>Failed to cancel war. Make sure the war exists and is active."
+  help-header: "<gold>--- War Commands ---</gold>"
+  help-declare: "<white>/war declare <nation> <gray>- Declare war on another nation"
+  help-list: "<white>/war list [all] <gray>- List your nation's wars or all wars (admin)"
+  help-info: "<white>/war info <nation1> [nation2] <gray>- Show info about wars"
+  help-cancel: "<white>/war cancel <nation1> <nation2> <gray>- Cancel a war (admin)"
 
 # Alliance related messages
 alliance:
@@ -96,6 +149,14 @@ alliance:
   received: "<green>{nation} has proposed an alliance with your nation!"
   accepted: "<green>The alliance with {nation} has been accepted!"
   declined: "<red>The alliance with {nation} has been declined."
+  description: "Manage nation alliances"
+  help-header: "<gold>--- Alliance Commands ---</gold>"
+  unknown-subcommand: "<red>Unknown alliance subcommand"
+  list-description: "List current alliances and requests"
+  list-header: "<gold>--- Nation Alliances ---</gold>"
+  no-alliances: "<gray>Your nation has no alliances</gray>"
+  current-alliances: "<yellow>Current Alliances:</yellow>"
+  pending-requests: "<yellow>Pending Alliance Requests:</yellow>"
 
 # Trade related messages
 trade:
@@ -126,3 +187,8 @@ vault:
   trade-npc-created: "<green>Trade Vault NPC created for trade with <gold>{nation}</gold>.</green>"
   npc-removed: "<red>Vault NPC removed!"
   npc-accessed: "<gray>Accessing vault for nation {name}!"
+
+# Help messages
+help:
+  nation-header: "<gold>--- Sovereignty Commands ---</gold>"
+  nation-command: "<white>/{command} {subcommand}</white> <gray>- {description}</gray>"

@@ -23,8 +23,7 @@ public class AllianceListCommand implements NationCommandExecutor.SubCommand {
 
     @Override
     public String getDescription() {
-        return plugin.getLocalizationManager().getMessage("alliance.list-description",
-                "List current alliances and requests");
+        return plugin.getLocalizationManager().getMessage("alliance.list-description");
     }
 
     @Override
@@ -43,16 +42,13 @@ public class AllianceListCommand implements NationCommandExecutor.SubCommand {
             return true;
         }
 
-        player.sendMessage(
-                plugin.getLocalizationManager().getMessage("alliance.list-header", "§6--- Nation Alliances ---"));
+        player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.list-header"));
 
         // List current alliances
         if (nation.getAlliances().isEmpty()) {
-            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.no-alliances",
-                    "Your nation has no alliances"));
+            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.no-alliances"));
         } else {
-            player.sendMessage(
-                    plugin.getLocalizationManager().getMessage("alliance.current-alliances", "§eCurrent Alliances:"));
+            player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.current-alliances"));
             for (String allyId : nation.getAlliances()) {
                 Nation ally = plugin.getServiceManager().getNationService().getNation(allyId);
                 if (ally != null) {
@@ -67,8 +63,7 @@ public class AllianceListCommand implements NationCommandExecutor.SubCommand {
                     .getAllianceRequests(nation.getId());
 
             if (!requests.isEmpty()) {
-                player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.pending-requests",
-                        "§ePending Alliance Requests:"));
+                player.sendMessage(plugin.getLocalizationManager().getMessage("alliance.pending-requests"));
                 for (String requesterId : requests) {
                     Nation requester = plugin.getServiceManager().getNationService().getNation(requesterId);
                     if (requester != null) {

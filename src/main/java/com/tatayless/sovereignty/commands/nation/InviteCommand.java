@@ -61,7 +61,9 @@ public class InviteCommand implements NationCommandExecutor.SubCommand {
         Player targetPlayer = Bukkit.getPlayer(targetName);
 
         if (targetPlayer == null || !targetPlayer.isOnline()) {
-            player.sendMessage("§cPlayer not found or offline: " + targetName);
+            player.sendMessage(plugin.getLocalizationManager().getMessage(
+                    "nation.player-not-found",
+                    "player", targetName));
             return true;
         }
 

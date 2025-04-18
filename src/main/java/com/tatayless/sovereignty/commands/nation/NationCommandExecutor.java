@@ -98,11 +98,14 @@ public class NationCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(Player player) {
-        player.sendMessage("§6--- Sovereignty Commands ---");
+        player.sendMessage(plugin.getLocalizationManager().getMessage("help.nation-header"));
 
         for (SubCommand subCommand : subCommands.values()) {
-            player.sendMessage("§f/" + plugin.getCommand("nation").getLabel() + " " +
-                    subCommand.getName() + " §7- " + subCommand.getDescription());
+            player.sendMessage(plugin.getLocalizationManager().getMessage(
+                    "help.nation-command",
+                    "command", plugin.getCommand("nation").getLabel(),
+                    "subcommand", subCommand.getName(),
+                    "description", subCommand.getDescription()));
         }
     }
 
