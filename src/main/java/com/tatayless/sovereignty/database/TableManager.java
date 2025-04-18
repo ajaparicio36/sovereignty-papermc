@@ -1,9 +1,10 @@
 package com.tatayless.sovereignty.database;
 
 import com.tatayless.sovereignty.Sovereignty;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.jooq.DSLContext;
 
-import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
 
 public class TableManager {
     private final Sovereignty plugin;
@@ -14,13 +15,28 @@ public class TableManager {
         this.isMySQL = isMySQL;
     }
 
-    public void createTables(DSLContext context) throws SQLException {
-        if (isMySQL) {
-            createMySQLTables(context);
-        } else {
-            createSQLiteTables(context);
-        }
-        plugin.getLogger().info("Database tables have been initialized");
+    public CompletableFuture<Void> createTables(DSLContext context) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                try {
+                    if (isMySQL) {
+                        createMySQLTables(context);
+                    } else {
+                        createSQLiteTables(context);
+                    }
+                    plugin.getLogger().info("Database tables have been initialized");
+                    future.complete(null);
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
+                    future.completeExceptionally(e);
+                }
+            }
+        }.runTaskAsynchronously(plugin);
+
+        return future;
     }
 
     private void createMySQLTables(DSLContext context) {
