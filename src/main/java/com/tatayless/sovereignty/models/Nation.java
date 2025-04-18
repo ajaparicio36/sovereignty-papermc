@@ -56,6 +56,11 @@ public class Nation {
         updatePowerLevel();
     }
 
+    public void addPower(double amount) {
+        this.power += amount;
+        updatePowerLevel();
+    }
+
     public int getPowerLevel() {
         return powerLevel;
     }
@@ -78,6 +83,10 @@ public class Nation {
 
     public boolean addAnnexedChunk(ChunkLocation chunk) {
         return annexedChunks.add(chunk);
+    }
+
+    public boolean removeAnnexedChunk(ChunkLocation chunk) {
+        return annexedChunks.remove(chunk);
     }
 
     public Set<String> getAlliances() {

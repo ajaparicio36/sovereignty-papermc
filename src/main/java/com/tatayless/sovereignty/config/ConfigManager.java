@@ -118,8 +118,23 @@ public class ConfigManager {
         return config.getBoolean("war.enable-assassination", false);
     }
 
+    public double getAnnexationPercentage() {
+        double percentage = config.getDouble("war.annexation-percentage", 0.25);
+        // Ensure value is between 0 and 1
+        return Math.max(0.0, Math.min(1.0, percentage));
+    }
+
     // Vault Settings
+    public int getBaseVaultRows() {
+        return config.getInt("vaults.base-vault-rows", 6);
+    }
+
+    public int getAdditionalRowsPerPowerLevel() {
+        return config.getInt("vaults.additional-rows-per-level", 6);
+    }
+
     public int getNationVaultRows() {
+        // Keeping this for backward compatibility
         return config.getInt("vaults.nation-vault-rows", 3);
     }
 
@@ -129,6 +144,27 @@ public class ConfigManager {
 
     public int getVaultExpiryTimeMinutes() {
         return config.getInt("vaults.expired-items-time-minutes", 1440); // Default 24 hours
+    }
+
+    public int getMaxVaultPages() {
+        return config.getInt("vaults.max-pages", 10);
+    }
+
+    // Trade Settings
+    public int getTradeConsecutiveForPower() {
+        return config.getInt("trade.consecutive-trades-for-power", 5);
+    }
+    
+    public double getTradePowerIncrement() {
+        return config.getDouble("trade.power-increment", 0.1);
+    }
+
+    public int getDefaultTradeInterval() {
+        return config.getInt("trade.default-interval-days", 3);
+    }
+
+    public int getMaxTradeInterval() {
+        return config.getInt("trade.max-interval-days", 7);
     }
 
     public FileConfiguration getConfig() {

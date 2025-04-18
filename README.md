@@ -1,8 +1,9 @@
 # 🏰 Sovereignty
 
-![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20-green)
+![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21-purple)
 ![API](https://img.shields.io/badge/API-PaperMC-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![Latest Release](https://img.shields.io/github/v/release/ajaparicio36/sovereignty-papermc?include_prereleases&color=green)
+![License](https://img.shields.io/badge/License-GPLv3-yellow)
 
 > Create, manage, and expand your nation in a world of diplomacy, war, and trade.
 

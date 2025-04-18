@@ -40,6 +40,8 @@ public class NationCommandExecutor implements CommandExecutor, TabCompleter {
         registerSubCommand(new LeaveCommand(plugin));
         registerSubCommand(new AppointCommand(plugin));
         registerSubCommand(new AllianceCommand(plugin)); // Register the alliance command
+        registerSubCommand(new VaultNPCCommand(plugin)); // Register the vault NPC command
+        registerSubCommand(new TradeCommand(plugin)); // Register the trade command
     }
 
     private void registerSubCommand(SubCommand command) {
