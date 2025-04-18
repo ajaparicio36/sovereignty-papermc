@@ -1,0 +1,54 @@
+# Gradle
+.gradle/
+build/
+out/
+classes/
+gradle-app.setting
+.gradletasknamecache
+
+# Eclipse
+*.launch
+.settings/
+.metadata
+.classpath
+.project
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+*.iml
+modules.xml
+.idea/misc.xml
+*.ipr
+.idea/modules/
+
+# VS Code
+.vscode/
+.code-workspace
+
+# Java
+*.class
+*.log
+# Allow gradle wrapper jar but ignore other jars
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+hs_err_pid*
+replay_pid*
+
+# Minecraft/PaperMC specific (test servers)
+run/
+server/
+
+# Operating System
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Misc
+*.bak
+*.swp
+*.tmp
+*~
