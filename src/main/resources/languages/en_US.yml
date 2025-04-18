@@ -1,0 +1,22 @@
+# English language file for Sovereignty plugin
+
+plugin:
+  enabled: "&aSovereignty has been enabled!"
+  disabled: "&cSovereignty has been disabled."
+  reload: "&aSovereignty configuration has been reloaded."
+
+database:
+  initialized: "&aDatabase connection established successfully!"
+  error: "&cFailed to initialize database. Check your configuration!"
+
+command:
+  no_permission: "&cYou don't have permission to use this command!"
+  unknown: "&cUnknown command. Use /sovereignty help for a list of commands."
+  help_header: "&6=== &eSovereignty Help &6==="
+  help_footer: "&6==========================="
+
+nation:
+  created: "&aYou have created a new nation: &e%s"
+  join: "&aYou have joined the nation: &e%s"
+  leave: "&cYou have left your nation."
+  not_member: "&cYou are not a member of any nation."

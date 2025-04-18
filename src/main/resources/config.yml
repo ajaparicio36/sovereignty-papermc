@@ -1,0 +1,20 @@
+# Sovereignty Configuration
+language: en_US # Default language for the plugin
+
+# Database settings
+database:
+  # Database type: 'mysql' or 'sqlite'
+  type: sqlite
+
+  # MySQL settings (only used if type is 'mysql')
+  mysql:
+    host: localhost
+    port: 3306
+    database: sovereignty
+    username: root
+    password: password
+    useSSL: false
+
+  # SQLite settings (only used if type is 'sqlite')
+  sqlite:
+    filename: sovereignty.db
