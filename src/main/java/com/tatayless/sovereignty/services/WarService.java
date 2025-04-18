@@ -199,6 +199,7 @@ public class WarService {
 
     /**
      * Annexes a portion of the loser's chunks to the winner's territory
+     * The annexed chunks will form a contiguous region where possible
      * 
      * @param winner The nation that won the war
      * @param loser  The nation that lost the war
@@ -209,20 +210,23 @@ public class WarService {
             return; // No chunks to annex
         }
 
-        // Calculate how many chunks to annex (e.g., 25% of loser's chunks)
+        // Calculate how many chunks to annex
         int annexCount = Math.max(1, (int) (loserChunks.size() * plugin.getConfigManager().getAnnexationPercentage()));
         annexCount = Math.min(annexCount, loserChunks.size()); // Don't try to annex more chunks than available
 
-        // Convert to list for easier selection
-        List<ChunkLocation> chunkList = new ArrayList<>(loserChunks);
-        Collections.shuffle(chunkList); // Randomize the chunks to annex
+        // Find a starting chunk that is adjacent to winner territory if possible
+        ChunkLocation startingChunk = findStartingChunk(winner, loserChunks);
+        if (startingChunk == null) {
+            // If no adjacent chunk found, just pick the first one
+            startingChunk = loserChunks.iterator().next();
+        }
 
-        // Annex the chunks
+        // Use BFS to find contiguous chunks to annex
+        Set<ChunkLocation> chunksToAnnex = findContiguousChunks(startingChunk, loserChunks, annexCount);
+
+        // Annex the selected chunks
         int annexed = 0;
-        for (ChunkLocation chunk : chunkList) {
-            if (annexed >= annexCount)
-                break;
-
+        for (ChunkLocation chunk : chunksToAnnex) {
             // Remove chunk from loser's claimed chunks
             loser.removeClaimedChunk(chunk);
 
@@ -248,6 +252,106 @@ public class WarService {
 
             plugin.getLogger().info(annexed + " chunks annexed from " + loser.getName() + " to " + winner.getName());
         }
+    }
+
+    /**
+     * Find a good starting chunk for annexation that borders the winner's territory
+     * 
+     * @param winner      The winning nation
+     * @param loserChunks The set of chunks owned by the loser
+     * @return A chunk location to start annexation from, or null if none found
+     */
+    private ChunkLocation findStartingChunk(Nation winner, Set<ChunkLocation> loserChunks) {
+        // Combine winner's claimed and annexed chunks
+        Set<ChunkLocation> winnerTerritory = new HashSet<>();
+        winnerTerritory.addAll(winner.getClaimedChunks());
+        winnerTerritory.addAll(winner.getAnnexedChunks());
+
+        // Look for a loser chunk that is adjacent to winner territory
+        for (ChunkLocation loserChunk : loserChunks) {
+            List<ChunkLocation> adjacentChunks = getAdjacentChunks(loserChunk);
+            for (ChunkLocation adjacentChunk : adjacentChunks) {
+                if (winnerTerritory.contains(adjacentChunk)) {
+                    return loserChunk; // Found a chunk that borders winner territory
+                }
+            }
+        }
+
+        return null; // No good starting point found
+    }
+
+    /**
+     * Find a contiguous set of chunks to annex
+     * 
+     * @param startingChunk   The chunk to start from
+     * @param availableChunks All available chunks that can be annexed
+     * @param maxChunks       Maximum number of chunks to annex
+     * @return A set of contiguous chunks to annex
+     */
+    private Set<ChunkLocation> findContiguousChunks(ChunkLocation startingChunk, Set<ChunkLocation> availableChunks,
+            int maxChunks) {
+        Set<ChunkLocation> chunksToAnnex = new HashSet<>();
+        Queue<ChunkLocation> queue = new LinkedList<>();
+
+        // Start with the initial chunk
+        queue.add(startingChunk);
+        chunksToAnnex.add(startingChunk);
+
+        while (!queue.isEmpty() && chunksToAnnex.size() < maxChunks) {
+            ChunkLocation current = queue.poll();
+
+            // Get all adjacent chunks
+            List<ChunkLocation> adjacentChunks = getAdjacentChunks(current);
+
+            // Add all valid adjacent chunks to the queue
+            for (ChunkLocation adjacent : adjacentChunks) {
+                if (availableChunks.contains(adjacent) && !chunksToAnnex.contains(adjacent)) {
+                    queue.add(adjacent);
+                    chunksToAnnex.add(adjacent);
+
+                    // Stop if we've reached the target number of chunks
+                    if (chunksToAnnex.size() >= maxChunks) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If we couldn't get enough contiguous chunks, add more non-contiguous ones to
+        // reach the target
+        if (chunksToAnnex.size() < maxChunks) {
+            for (ChunkLocation chunk : availableChunks) {
+                if (!chunksToAnnex.contains(chunk)) {
+                    chunksToAnnex.add(chunk);
+                    if (chunksToAnnex.size() >= maxChunks) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return chunksToAnnex;
+    }
+
+    /**
+     * Get all chunks adjacent to the given chunk
+     * 
+     * @param chunk The chunk to find adjacents for
+     * @return List of adjacent chunk locations
+     */
+    private List<ChunkLocation> getAdjacentChunks(ChunkLocation chunk) {
+        List<ChunkLocation> adjacentChunks = new ArrayList<>(4);
+
+        // North
+        adjacentChunks.add(new ChunkLocation(chunk.getX(), chunk.getZ() - 1, chunk.getWorldName()));
+        // South
+        adjacentChunks.add(new ChunkLocation(chunk.getX(), chunk.getZ() + 1, chunk.getWorldName()));
+        // East
+        adjacentChunks.add(new ChunkLocation(chunk.getX() + 1, chunk.getZ(), chunk.getWorldName()));
+        // West
+        adjacentChunks.add(new ChunkLocation(chunk.getX() - 1, chunk.getZ(), chunk.getWorldName()));
+
+        return adjacentChunks;
     }
 
     public CompletableFuture<Boolean> cancelWar(String warId) {
