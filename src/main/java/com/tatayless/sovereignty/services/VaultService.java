@@ -40,8 +40,8 @@ public class VaultService {
     private final Gson gson = new Gson();
 
     public static final int MAX_SINGLE_PAGE_SIZE = 54; // 6 rows
-    private static final int NEXT_PAGE_SLOT = 53; // Last slot in inventory (6th row, 9th column)
-    private static final int PREV_PAGE_SLOT = 45; // First slot in last row (6th row, 1st column)
+    public static final int NEXT_PAGE_SLOT = 53; // Last slot in inventory (6th row, 9th column)
+    public static final int PREV_PAGE_SLOT = 45; // First slot in last row (6th row, 1st column)
 
     public VaultService(Sovereignty plugin, NationService nationService) {
         this.plugin = plugin;
@@ -220,6 +220,9 @@ public class VaultService {
         }
 
         player.openInventory(inventory);
+
+        // Register player as viewer for this vault page for real-time updates
+        plugin.getVaultUpdateManager().registerNationVaultViewer(vault.getId(), player.getUniqueId(), page);
     }
 
     private ItemStack createNavigationItem(Material material, String name) {
@@ -378,6 +381,25 @@ public class VaultService {
             event.setCancelled(true);
             return;
         }
+
+        // If click wasn't cancelled, schedule an update for the next tick
+        if (!event.isCancelled()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                // Update vault for all other players viewing this page
+                NationVault vault = nationVaults.get(session.getNationId());
+                if (vault != null) {
+                    // Update the vault content after the click is processed
+                    updateVaultPage(player, vault, session.getPage());
+
+                    // Broadcast changes to other viewers
+                    plugin.getVaultUpdateManager().updateNationVaultViewers(
+                            vault.getId(),
+                            session.getPage(),
+                            player.getUniqueId(),
+                            event.getInventory());
+                }
+            });
+        }
     }
 
     private boolean isNavigationButton(ItemStack item) {
@@ -386,7 +408,7 @@ public class VaultService {
         ItemMeta meta = item.getItemMeta();
         if (meta == null)
             return false;
-        String name = meta.getDisplayName();
+        String name = meta.displayName().toString();
         return name != null && (name.contains("Previous Page") || name.contains("Next Page"));
     }
 
@@ -396,6 +418,10 @@ public class VaultService {
             return;
 
         VaultSession session = playerSessions.get(player.getUniqueId());
+
+        // Unregister from the current page
+        plugin.getVaultUpdateManager().unregisterNationVaultViewer(vault.getId(), player.getUniqueId(),
+                session.getPage());
 
         // Update the current page inventory before switching
         updateVaultPage(player, vault, session.getPage());
@@ -427,6 +453,10 @@ public class VaultService {
         if (vault != null) {
             updateVaultPage(player, vault, session.getPage());
         }
+
+        // Unregister player from the vault viewers
+        plugin.getVaultUpdateManager().unregisterNationVaultViewer(vault.getId(), player.getUniqueId(),
+                session.getPage());
 
         // Remove the session when the player closes the last vault inventory
         if (!player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {

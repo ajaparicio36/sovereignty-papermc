@@ -6,6 +6,7 @@ import com.tatayless.sovereignty.database.DatabaseManager;
 import com.tatayless.sovereignty.listeners.ListenerManager;
 import com.tatayless.sovereignty.localization.LocalizationManager;
 import com.tatayless.sovereignty.services.ServiceManager;
+import com.tatayless.sovereignty.services.VaultUpdateManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.SQLException;
@@ -18,6 +19,7 @@ public class Sovereignty extends JavaPlugin {
     private ServiceManager serviceManager;
     private CommandManager commandManager;
     private ListenerManager listenerManager;
+    private VaultUpdateManager vaultUpdateManager;
 
     @Override
     public void onEnable() {
@@ -37,6 +39,9 @@ public class Sovereignty extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        // Initialize VaultUpdateManager
+        vaultUpdateManager = new VaultUpdateManager(this);
 
         // Initialize services
         serviceManager = new ServiceManager(this);
@@ -85,5 +90,9 @@ public class Sovereignty extends JavaPlugin {
      */
     public CommandManager getCommandManager() {
         return commandManager;
+    }
+
+    public VaultUpdateManager getVaultUpdateManager() {
+        return vaultUpdateManager;
     }
 }

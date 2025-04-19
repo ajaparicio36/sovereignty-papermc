@@ -31,8 +31,8 @@ public class TradeVaultHandler {
     private final Gson gson;
 
     // Constants for navigation buttons
-    private static final int CONFIRM_BUTTON_SLOT = 49; // Middle of bottom row
-    private static final int INFO_BUTTON_SLOT = 4; // Middle of top row
+    public static final int CONFIRM_BUTTON_SLOT = 49; // Middle of bottom row
+    public static final int INFO_BUTTON_SLOT = 4; // Middle of top row
 
     // Cache for vault items
     private final Map<String, Map<Boolean, ItemStack[]>> tradeVaultItems = new HashMap<>();
@@ -81,6 +81,9 @@ public class TradeVaultHandler {
 
         tradeService.getPlayerSessions().put(player.getUniqueId(),
                 new TradeSession(nationId, tradeId, sessionType));
+
+        // Register player as viewing this trade vault for real-time updates
+        plugin.getVaultUpdateManager().registerTradeVaultViewer(tradeId, isSender, player.getUniqueId());
     }
 
     public void updateTradeVault(Player player, TradeSession session, Inventory inventory) {
@@ -98,6 +101,13 @@ public class TradeVaultHandler {
         // Save items to database
         boolean isSender = session.getType() == TradeSessionType.SENDING_VAULT;
         saveTradeVaultItems(session.getTradeId(), isSender, contents);
+
+        // Update other viewers of this trade vault
+        plugin.getVaultUpdateManager().updateTradeVaultViewers(
+                session.getTradeId(),
+                isSender,
+                player.getUniqueId(),
+                inventory);
     }
 
     public void handleTradeVaultClick(InventoryClickEvent event, TradeSession session) {
@@ -120,6 +130,18 @@ public class TradeVaultHandler {
             if (targetSlot == INFO_BUTTON_SLOT || targetSlot == CONFIRM_BUTTON_SLOT) {
                 event.setCancelled(true);
             }
+        }
+
+        // Handle updating other viewers after click completes
+        // Schedule an update for the next tick to ensure inventory changes are complete
+        if (!event.isCancelled()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                Player player = (Player) event.getWhoClicked();
+                @SuppressWarnings("unused")
+                boolean isSender = session.getType() == TradeSessionType.SENDING_VAULT;
+
+                updateTradeVault(player, session, event.getInventory());
+            });
         }
     }
 
@@ -303,5 +325,16 @@ public class TradeVaultHandler {
     // Clear all cache
     public void clearAllCache() {
         tradeVaultItems.clear();
+    }
+
+    // When a player closes the trade vault inventory
+    public void handleInventoryClose(Player player, TradeSession session) {
+        boolean isSender = session.getType() == TradeSessionType.SENDING_VAULT;
+
+        // Unregister the player from vault viewers
+        plugin.getVaultUpdateManager().unregisterTradeVaultViewer(
+                session.getTradeId(),
+                isSender,
+                player.getUniqueId());
     }
 }
