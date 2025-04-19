@@ -230,6 +230,12 @@ public class TradeService {
 
         TradeSession session = playerSessions.get(playerUuid);
 
+        // Handle specific inventory types based on the inventory holder
+        if (event.getInventory().getHolder() instanceof TradeVaultHandler.TradeVaultInventoryHolder) {
+            vaultHandler.handleTradeVaultClick(event, session);
+            return;
+        }
+
         // Handle different inventory types based on session type
         switch (session.getType()) {
             case CREATE:
@@ -250,6 +256,8 @@ public class TradeService {
             case SENDING_VAULT:
             case RECEIVING_VAULT:
                 // Handle vault interactions safely including buttons
+                // This case should rarely be reached now that we check for
+                // TradeVaultInventoryHolder
                 vaultHandler.handleTradeVaultClick(event, session);
                 break;
         }
@@ -266,17 +274,15 @@ public class TradeService {
         TradeSession session = playerSessions.get(playerUuid);
 
         // If this was a vault inventory, update the contents
-        if (session.getType() == TradeSessionType.SENDING_VAULT ||
-                session.getType() == TradeSessionType.RECEIVING_VAULT) {
-
+        if (event.getInventory().getHolder() instanceof TradeVaultHandler.TradeVaultInventoryHolder) {
             vaultHandler.updateTradeVault(player, session, event.getInventory());
-        }
+            vaultHandler.handleInventoryClose(player, session);
 
+            // Don't remove the session here, as the player may be navigating between trade
+            // menus
+        }
         // Only remove session if player is not navigating within trade menus
-        // Check the title to ensure they're leaving trade-related inventories
-        @SuppressWarnings("unused")
-        String inventoryTitle = event.getView().title().toString().toLowerCase();
-        if (!player.getOpenInventory().title().toString().toLowerCase().contains("trade")) {
+        else if (!player.getOpenInventory().title().toString().toLowerCase().contains("trade")) {
             playerSessions.remove(playerUuid);
         }
     }

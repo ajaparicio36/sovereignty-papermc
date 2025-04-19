@@ -9,8 +9,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
-import java.util.UUID;
 import java.util.logging.Level;
 
 public class VaultListener implements Listener {
@@ -23,60 +23,96 @@ public class VaultListener implements Listener {
         plugin.getLogger().info("VaultListener initialized with VaultService reference.");
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player))
             return;
 
-        Player player = (Player) event.getWhoClicked();
-        Inventory topInventory = event.getView().getTopInventory();
-        String title = event.getView().title().toString();
-
-        if (!title.startsWith("Nation Vault:"))
+        // Check if this is a vault inventory
+        if (!(event.getInventory().getHolder() instanceof VaultService.VaultInventoryHolder))
             return;
 
-        plugin.getLogger().log(Level.INFO, "[DEBUG] Vault click by " + player.getName() +
-                " - RawSlot: " + event.getRawSlot() +
-                " Slot: " + event.getSlot() +
-                " ClickType: " + event.getClick() +
-                " Action: " + event.getAction());
+        Player player = (Player) event.getWhoClicked();
 
-        int rawSlot = event.getRawSlot();
-        boolean clickedTopInventory = event.getClickedInventory() == topInventory;
+        // Debug the click
+        plugin.getLogger().log(Level.INFO, "Vault click: Player=" + player.getName() +
+                ", Slot=" + event.getSlot() +
+                ", RawSlot=" + event.getRawSlot() +
+                ", Action=" + event.getAction() +
+                ", ClickType=" + event.getClick());
 
-        if (isNavigationSlot(rawSlot) && clickedTopInventory) {
-            plugin.getLogger().log(Level.INFO, "[DEBUG] Click detected in navigation slot: " + rawSlot);
+        // Check for navigation button clicks
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem != null && vaultService.isNavigationItem(clickedItem)) {
+            plugin.getLogger().info("Navigation button clicked by " + player.getName());
             event.setCancelled(true);
 
-            if (event.getClick() == ClickType.LEFT) {
-                if (rawSlot == VaultService.NEXT_PAGE_SLOT) {
-                    plugin.getLogger().info("[DEBUG] Processing navigation to NEXT page");
-                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                        plugin.getLogger().info("[DEBUG] Executing next page navigation task");
-                        vaultService.navigateToNextPage(player);
-                    }, 1L); // Short delay for stability
-                } else if (rawSlot == VaultService.PREV_PAGE_SLOT) {
-                    plugin.getLogger().info("[DEBUG] Processing navigation to PREVIOUS page");
-                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                        plugin.getLogger().info("[DEBUG] Executing previous page navigation task");
-                        vaultService.navigateToPreviousPage(player);
-                    }, 1L); // Short delay for stability
-                }
-            }
+            // Schedule navigation
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                vaultService.handleNavigationClick(player, clickedItem);
+            });
             return;
         }
 
-        if (!event.isCancelled()) {
-            plugin.getLogger().info("[DEBUG] Regular click in vault UI, scheduling update");
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                plugin.getLogger().info("[DEBUG] Executing scheduled vault update after click");
-                vaultService.updateAndSaveVaultForPlayer(player);
-            }, 1L); // Short delay for stability
+        // Cancel any action that would put items in navigation slots
+        VaultService.VaultInventoryHolder holder = (VaultService.VaultInventoryHolder) event.getInventory().getHolder();
+        if (holder != null && event.getInventory().getSize() == 54) {
+            int rawSlot = event.getRawSlot();
+            // If this is a SHIFT_CLICK from player inventory (bottom) to vault inventory
+            // (top)
+            if (event.getClick().isShiftClick() && rawSlot >= 54) {
+                // Cancel the event if the destination slot would be a navigation button
+                if (wouldShiftClickToNavigationSlot(event)) {
+                    plugin.getLogger().info("Cancelled shift-click that would affect navigation slots");
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+            // For direct clicks on navigation slots
+            else if ((rawSlot == VaultService.NEXT_PAGE_SLOT || rawSlot == VaultService.PREV_PAGE_SLOT) &&
+                    rawSlot < 54) {
+                plugin.getLogger().info("Cancelled click on navigation slot " + rawSlot);
+                event.setCancelled(true);
+                return;
+            }
+            // For swaps with hotbar
+            else if (event.getClick() == ClickType.NUMBER_KEY) {
+                int slot = event.getSlot();
+                if (slot == VaultService.NEXT_PAGE_SLOT || slot == VaultService.PREV_PAGE_SLOT) {
+                    plugin.getLogger().info("Cancelled hotbar swap with navigation slot " + slot);
+                    event.setCancelled(true);
+                    return;
+                }
+            }
         }
     }
 
-    private boolean isNavigationSlot(int slot) {
-        return slot == VaultService.NEXT_PAGE_SLOT || slot == VaultService.PREV_PAGE_SLOT;
+    private boolean wouldShiftClickToNavigationSlot(InventoryClickEvent event) {
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null)
+            return false;
+
+        Inventory topInventory = event.getView().getTopInventory();
+        // Find first valid slot for this item
+        for (int i = 0; i < topInventory.getSize(); i++) {
+            // Skip navigation slots
+            if (i == VaultService.NEXT_PAGE_SLOT || i == VaultService.PREV_PAGE_SLOT) {
+                continue;
+            }
+
+            ItemStack current = topInventory.getItem(i);
+            if (current == null || current.getType().isAir()) {
+                return false; // Found a valid slot, won't go to navigation
+            }
+
+            // Check for partial stack
+            if (current.isSimilar(clickedItem) && current.getAmount() < current.getMaxStackSize()) {
+                return false; // Found a partial stack, won't go to navigation
+            }
+        }
+
+        // No other slots available, might go to navigation slot
+        return true;
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -84,36 +120,19 @@ public class VaultListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player))
             return;
 
-        String title = event.getView().title().toString();
-        if (!title.startsWith("Nation Vault:"))
+        // Check if this is a vault inventory
+        if (!(event.getInventory().getHolder() instanceof VaultService.VaultInventoryHolder))
             return;
 
-        Player player = (Player) event.getWhoClicked();
-        plugin.getLogger().log(Level.INFO, "[DEBUG] Vault drag by " + player.getName() +
-                " - Slots: " + event.getRawSlots() +
-                " NewItems: " + event.getNewItems());
-
-        for (int slot : event.getRawSlots()) {
-            if (slot < event.getView().getTopInventory().getSize()) {
-                if (isNavigationSlot(slot)) {
-                    plugin.getLogger().info("[DEBUG] Cancelled drag involving navigation slot: " + slot);
+        // Cancel if drag affects navigation buttons
+        if (event.getInventory().getSize() == 54) {
+            for (int slot : event.getRawSlots()) {
+                if ((slot == VaultService.NEXT_PAGE_SLOT || slot == VaultService.PREV_PAGE_SLOT) && slot < 54) {
+                    plugin.getLogger().info("Cancelled drag affecting navigation slots");
                     event.setCancelled(true);
                     return;
                 }
             }
-        }
-
-        if (!event.isCancelled()) {
-            plugin.getServer().getScheduler().runTask(plugin, () -> {
-                if (player.isOnline() && player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {
-                    plugin.getLogger()
-                            .info("[DEBUG] Running scheduled vault update after drag for player " + player.getName());
-                    vaultService.updateAndSaveVaultForPlayer(player);
-                } else {
-                    plugin.getLogger().info("[DEBUG] Skipped scheduled vault update for " + player.getName()
-                            + " (offline or different inventory after drag).");
-                }
-            });
         }
     }
 
@@ -121,21 +140,16 @@ public class VaultListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player))
             return;
-
-        String title = event.getView().title().toString();
-        if (!title.startsWith("Nation Vault:"))
+        if (!(event.getInventory().getHolder() instanceof VaultService.VaultInventoryHolder))
             return;
 
-        Player player = (Player) event.getPlayer();
-        plugin.getLogger().info("[DEBUG] Inventory close event for vault by " + player.getName());
+        plugin.getLogger().info("Player " + event.getPlayer().getName() + " closing vault inventory");
         vaultService.handleInventoryClose(event);
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        UUID playerUuid = event.getPlayer().getUniqueId();
-        plugin.getLogger().info("[DEBUG] Player quit event for " + event.getPlayer().getName());
-        vaultService.handlePlayerQuit(playerUuid);
-        plugin.getVaultUpdateManager().unregisterPlayerFromAllVaults(playerUuid);
+        plugin.getLogger().info("Player quit event: " + event.getPlayer().getName());
+        vaultService.handlePlayerQuit(event.getPlayer().getUniqueId());
     }
 }

@@ -8,11 +8,15 @@ import com.tatayless.sovereignty.models.Trade;
 import com.tatayless.sovereignty.services.TradeService;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
@@ -37,10 +41,20 @@ public class TradeVaultHandler {
     // Cache for vault items
     private final Map<String, Map<Boolean, ItemStack[]>> tradeVaultItems = new HashMap<>();
 
+    // NamespacedKeys for PersistentDataContainer
+    private final NamespacedKey buttonTypeKey;
+    private final NamespacedKey tradeIdKey;
+    private final NamespacedKey isSenderKey;
+
     public TradeVaultHandler(TradeService tradeService, Sovereignty plugin) {
         this.tradeService = tradeService;
         this.plugin = plugin;
         this.gson = new Gson();
+
+        // Initialize NamespacedKeys
+        this.buttonTypeKey = new NamespacedKey(plugin, "trade_button_type");
+        this.tradeIdKey = new NamespacedKey(plugin, "trade_id");
+        this.isSenderKey = new NamespacedKey(plugin, "is_sender");
     }
 
     public void openTradeVault(Player player, String nationId, String tradeId) {
@@ -53,9 +67,11 @@ public class TradeVaultHandler {
         boolean isSender = trade.getSendingNationId().equals(nationId);
         String title = isSender ? "Trade Sending Vault" : "Trade Receiving Vault";
 
-        // Create inventory
-        Inventory inventory = Bukkit.createInventory(null, 54,
+        // Create inventory with custom holder
+        TradeVaultInventoryHolder holder = new TradeVaultInventoryHolder(tradeId, nationId, isSender);
+        Inventory inventory = Bukkit.createInventory(holder, 54,
                 net.kyori.adventure.text.Component.text(title + ": " + trade.getId()));
+        holder.setInventory(inventory);
 
         // Retrieve items from the vault
         ItemStack[] vaultItems = getTradeVaultItems(tradeId, isSender);
@@ -79,15 +95,21 @@ public class TradeVaultHandler {
 
         TradeSessionType sessionType = isSender ? TradeSessionType.SENDING_VAULT : TradeSessionType.RECEIVING_VAULT;
 
-        tradeService.getPlayerSessions().put(player.getUniqueId(),
-                new TradeSession(sessionType, nationId,
-                        trade.isSender(nationId) ? trade.getReceivingNationId() : trade.getSendingNationId(), 0));
+        TradeSession session = new TradeSession(sessionType, nationId,
+                trade.isSender(nationId) ? trade.getReceivingNationId() : trade.getSendingNationId(), 0);
+        session.setTradeId(tradeId);
+        tradeService.getPlayerSessions().put(player.getUniqueId(), session);
 
         // Register player as viewing this trade vault for real-time updates
         plugin.getVaultUpdateManager().registerTradeVaultViewer(tradeId, isSender, player.getUniqueId());
     }
 
     public void updateTradeVault(Player player, TradeSession session, Inventory inventory) {
+        // Check if the inventory has our custom holder
+        if (!(inventory.getHolder() instanceof TradeVaultInventoryHolder)) {
+            return;
+        }
+
         // Create a copy of the inventory contents, ignoring buttons
         ItemStack[] contents = new ItemStack[inventory.getSize()];
 
@@ -100,18 +122,23 @@ public class TradeVaultHandler {
         }
 
         // Save items to database
-        boolean isSender = session.getType() == TradeSessionType.SENDING_VAULT;
-        saveTradeVaultItems(session.getTradeId(), isSender, contents);
+        TradeVaultInventoryHolder holder = (TradeVaultInventoryHolder) inventory.getHolder();
+        saveTradeVaultItems(holder.getTradeId(), holder.isSender(), contents);
 
         // Update other viewers of this trade vault
         plugin.getVaultUpdateManager().updateTradeVaultViewers(
-                session.getTradeId(),
-                isSender,
+                holder.getTradeId(),
+                holder.isSender(),
                 player.getUniqueId(),
                 inventory);
     }
 
     public void handleTradeVaultClick(InventoryClickEvent event, TradeSession session) {
+        // Make sure we're dealing with our custom inventory holder
+        if (!(event.getInventory().getHolder() instanceof TradeVaultInventoryHolder)) {
+            return;
+        }
+
         // Cancel interaction with special buttons
         int slot = event.getRawSlot();
         if (slot == INFO_BUTTON_SLOT || slot == CONFIRM_BUTTON_SLOT) {
@@ -119,7 +146,14 @@ public class TradeVaultHandler {
 
             // Handle confirm button click
             if (slot == CONFIRM_BUTTON_SLOT && event.getClick().isLeftClick()) {
-                handleConfirmButtonClick((Player) event.getWhoClicked(), session);
+                ItemStack clickedItem = event.getCurrentItem();
+                if (clickedItem != null && clickedItem.hasItemMeta()) {
+                    PersistentDataContainer container = clickedItem.getItemMeta().getPersistentDataContainer();
+                    if (container.has(buttonTypeKey, PersistentDataType.STRING) &&
+                            "confirm".equals(container.get(buttonTypeKey, PersistentDataType.STRING))) {
+                        handleConfirmButtonClick((Player) event.getWhoClicked(), session);
+                    }
+                }
             }
             return;
         }
@@ -138,9 +172,6 @@ public class TradeVaultHandler {
         if (!event.isCancelled()) {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 Player player = (Player) event.getWhoClicked();
-                @SuppressWarnings("unused")
-                boolean isSender = session.getType() == TradeSessionType.SENDING_VAULT;
-
                 updateTradeVault(player, session, event.getInventory());
             });
         }
@@ -207,6 +238,13 @@ public class TradeVaultHandler {
         }
 
         meta.lore(lore);
+
+        // Store data in persistent data container
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        container.set(buttonTypeKey, PersistentDataType.STRING, "info");
+        container.set(tradeIdKey, PersistentDataType.STRING, trade.getId());
+        container.set(isSenderKey, PersistentDataType.INTEGER, isSender ? 1 : 0);
+
         infoButton.setItemMeta(meta);
         return infoButton;
     }
@@ -223,6 +261,11 @@ public class TradeVaultHandler {
                 .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
 
         meta.lore(lore);
+
+        // Store button type in persistent data container
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        container.set(buttonTypeKey, PersistentDataType.STRING, "confirm");
+
         confirmButton.setItemMeta(meta);
         return confirmButton;
     }
@@ -359,12 +402,61 @@ public class TradeVaultHandler {
 
     // When a player closes the trade vault inventory
     public void handleInventoryClose(Player player, TradeSession session) {
-        boolean isSender = session.getType() == TradeSessionType.SENDING_VAULT;
+        if (player.getOpenInventory().getTopInventory().getHolder() instanceof TradeVaultInventoryHolder) {
+            TradeVaultInventoryHolder holder = (TradeVaultInventoryHolder) player.getOpenInventory().getTopInventory()
+                    .getHolder();
+            // Unregister the player from vault viewers
+            plugin.getVaultUpdateManager().unregisterTradeVaultViewer(
+                    holder.getTradeId(),
+                    holder.isSender(),
+                    player.getUniqueId());
+        }
+    }
 
-        // Unregister the player from vault viewers
-        plugin.getVaultUpdateManager().unregisterTradeVaultViewer(
-                session.getTradeId(),
-                isSender,
-                player.getUniqueId());
+    /**
+     * Custom InventoryHolder for Trade Vaults that stores trade information
+     */
+    public static class TradeVaultInventoryHolder implements InventoryHolder {
+        private final String tradeId;
+        private final String nationId;
+        private final boolean sender;
+        private Inventory inventory;
+
+        public TradeVaultInventoryHolder(String tradeId, String nationId, boolean sender) {
+            this.tradeId = tradeId;
+            this.nationId = nationId;
+            this.sender = sender;
+        }
+
+        @Override
+        public Inventory getInventory() {
+            return inventory;
+        }
+
+        public void setInventory(Inventory inventory) {
+            this.inventory = inventory;
+        }
+
+        public String getTradeId() {
+            return tradeId;
+        }
+
+        public String getNationId() {
+            return nationId;
+        }
+
+        public boolean isSender() {
+            return sender;
+        }
+    }
+
+    // Check if an item is a trade button by examining its PDC
+    public boolean isTradeButton(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+
+        PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
+        return container.has(buttonTypeKey, PersistentDataType.STRING);
     }
 }
