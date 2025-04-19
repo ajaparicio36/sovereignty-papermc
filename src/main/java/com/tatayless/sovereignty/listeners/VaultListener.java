@@ -9,7 +9,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.UUID;
 import java.util.logging.Level;
@@ -21,10 +20,10 @@ public class VaultListener implements Listener {
     public VaultListener(Sovereignty plugin, VaultService vaultService) {
         this.plugin = plugin;
         this.vaultService = vaultService;
+        plugin.getLogger().info("VaultListener initialized with VaultService reference.");
     }
 
-    @SuppressWarnings("unused")
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player))
             return;
@@ -40,11 +39,7 @@ public class VaultListener implements Listener {
                 " - RawSlot: " + event.getRawSlot() +
                 " Slot: " + event.getSlot() +
                 " ClickType: " + event.getClick() +
-                " Action: " + event.getAction() +
-                " CurrentItem: " + event.getCurrentItem() +
-                " Cursor: " + event.getCursor() +
-                " ClickedInventoryType: "
-                + (event.getClickedInventory() != null ? event.getClickedInventory().getType() : "NULL"));
+                " Action: " + event.getAction());
 
         int rawSlot = event.getRawSlot();
         boolean clickedTopInventory = event.getClickedInventory() == topInventory;
@@ -55,130 +50,33 @@ public class VaultListener implements Listener {
 
             if (event.getClick() == ClickType.LEFT) {
                 if (rawSlot == VaultService.NEXT_PAGE_SLOT) {
-                    plugin.getLogger().info("[DEBUG] Processing navigation to NEXT page for " + player.getName());
-                    plugin.getServer().getScheduler().runTask(plugin, () -> vaultService.navigateToNextPage(player));
+                    plugin.getLogger().info("[DEBUG] Processing navigation to NEXT page");
+                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                        plugin.getLogger().info("[DEBUG] Executing next page navigation task");
+                        vaultService.navigateToNextPage(player);
+                    }, 1L); // Short delay for stability
                 } else if (rawSlot == VaultService.PREV_PAGE_SLOT) {
-                    plugin.getLogger().info("[DEBUG] Processing navigation to PREVIOUS page for " + player.getName());
-                    plugin.getServer().getScheduler().runTask(plugin,
-                            () -> vaultService.navigateToPreviousPage(player));
+                    plugin.getLogger().info("[DEBUG] Processing navigation to PREVIOUS page");
+                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                        plugin.getLogger().info("[DEBUG] Executing previous page navigation task");
+                        vaultService.navigateToPreviousPage(player);
+                    }, 1L); // Short delay for stability
                 }
             }
             return;
         }
 
-        if (event.getClick() == ClickType.NUMBER_KEY) {
-            int hotbarSlot = event.getHotbarButton();
-            ItemStack hotbarItem = player.getInventory().getItem(hotbarSlot);
-            if (isNavigationSlot(event.getSlot()) && clickedTopInventory) {
-                plugin.getLogger().log(Level.INFO,
-                        "[DEBUG] Cancelled NUMBER_KEY swap into navigation slot " + event.getSlot());
-                event.setCancelled(true);
-                return;
-            }
-            if (isNavigationSlot(event.getSlot()) && clickedTopInventory
-                    && vaultService.isNavigationButton(event.getCurrentItem())) {
-                plugin.getLogger().log(Level.INFO,
-                        "[DEBUG] Cancelled NUMBER_KEY swap from navigation slot " + event.getSlot());
-                event.setCancelled(true);
-                return;
-            }
-        }
-
-        if (event.isShiftClick()) {
-            if (!clickedTopInventory) {
-                ItemStack clickedItem = event.getCurrentItem();
-                if (clickedItem != null) {
-                    int targetSlot = findShiftClickTargetSlot(topInventory, clickedItem);
-                    if (isNavigationSlot(targetSlot)) {
-                        plugin.getLogger().log(Level.INFO,
-                                "[DEBUG] Cancelled shift-click targeting navigation slot " + targetSlot);
-                        event.setCancelled(true);
-                        return;
-                    }
-                }
-            } else {
-                if (isNavigationSlot(event.getSlot()) && vaultService.isNavigationButton(event.getCurrentItem())) {
-                    plugin.getLogger().log(Level.INFO,
-                            "[DEBUG] Cancelled shift-click of navigation button out of slot " + event.getSlot());
-                    event.setCancelled(true);
-                    return;
-                }
-            }
-        }
-
-        if (clickedTopInventory && isNavigationSlot(event.getSlot())
-                && vaultService.isNavigationButton(event.getCurrentItem())) {
-            plugin.getLogger().log(Level.INFO,
-                    "[DEBUG] Cancelled pickup of navigation button from slot " + event.getSlot());
-            event.setCancelled(true);
-            return;
-        }
-
-        if (event.getClick() == ClickType.LEFT || event.getClick() == ClickType.RIGHT) {
-            if (clickedTopInventory && isNavigationSlot(event.getSlot()) && !event.getCursor().getType().isAir()) {
-                plugin.getLogger().log(Level.INFO, "[DEBUG] Cancelled drop onto navigation slot " + event.getSlot());
-                event.setCancelled(true);
-                return;
-            }
-        }
-
-        if (event.getClick() == ClickType.DOUBLE_CLICK) {
-            if (isNavigationSlot(event.getSlot()) && clickedTopInventory) {
-                plugin.getLogger().log(Level.INFO,
-                        "[DEBUG] Cancelled double-click involving navigation slot " + event.getSlot());
-                event.setCancelled(true);
-                return;
-            }
-        }
-
-        if (event.isCancelled()) {
-            plugin.getLogger().log(Level.INFO,
-                    "[DEBUG] Vault click event cancelled for " + player.getName() + ". No update scheduled.");
-            return;
-        }
-
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (player.isOnline() && player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {
-                plugin.getLogger()
-                        .info("[DEBUG] Running scheduled vault update after click for player " + player.getName());
+        if (!event.isCancelled()) {
+            plugin.getLogger().info("[DEBUG] Regular click in vault UI, scheduling update");
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                plugin.getLogger().info("[DEBUG] Executing scheduled vault update after click");
                 vaultService.updateAndSaveVaultForPlayer(player);
-            } else {
-                plugin.getLogger().info("[DEBUG] Skipped scheduled vault update for " + player.getName()
-                        + " (offline or different inventory).");
-            }
-        });
+            }, 1L); // Short delay for stability
+        }
     }
 
     private boolean isNavigationSlot(int slot) {
         return slot == VaultService.NEXT_PAGE_SLOT || slot == VaultService.PREV_PAGE_SLOT;
-    }
-
-    private int findShiftClickTargetSlot(Inventory topInventory, ItemStack clickedItem) {
-        int firstPartial = -1;
-        int firstEmpty = -1;
-
-        for (int i = 0; i < topInventory.getSize(); i++) {
-            if (isNavigationSlot(i))
-                continue;
-
-            ItemStack current = topInventory.getItem(i);
-            if (current != null && current.isSimilar(clickedItem) && current.getAmount() < current.getMaxStackSize()) {
-                if (firstPartial == -1) {
-                    firstPartial = i;
-                }
-            } else if (current == null || current.getType().isAir()) {
-                if (firstEmpty == -1) {
-                    firstEmpty = i;
-                }
-            }
-        }
-
-        if (firstPartial != -1)
-            return firstPartial;
-        if (firstEmpty != -1)
-            return firstEmpty;
-
-        return -1;
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -205,22 +103,18 @@ public class VaultListener implements Listener {
             }
         }
 
-        if (event.isCancelled()) {
-            plugin.getLogger().log(Level.INFO,
-                    "[DEBUG] Vault drag event cancelled for " + player.getName() + ". No update scheduled.");
-            return;
+        if (!event.isCancelled()) {
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                if (player.isOnline() && player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {
+                    plugin.getLogger()
+                            .info("[DEBUG] Running scheduled vault update after drag for player " + player.getName());
+                    vaultService.updateAndSaveVaultForPlayer(player);
+                } else {
+                    plugin.getLogger().info("[DEBUG] Skipped scheduled vault update for " + player.getName()
+                            + " (offline or different inventory after drag).");
+                }
+            });
         }
-
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (player.isOnline() && player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {
-                plugin.getLogger()
-                        .info("[DEBUG] Running scheduled vault update after drag for player " + player.getName());
-                vaultService.updateAndSaveVaultForPlayer(player);
-            } else {
-                plugin.getLogger().info("[DEBUG] Skipped scheduled vault update for " + player.getName()
-                        + " (offline or different inventory after drag).");
-            }
-        });
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -240,8 +134,8 @@ public class VaultListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID playerUuid = event.getPlayer().getUniqueId();
+        plugin.getLogger().info("[DEBUG] Player quit event for " + event.getPlayer().getName());
         vaultService.handlePlayerQuit(playerUuid);
         plugin.getVaultUpdateManager().unregisterPlayerFromAllVaults(playerUuid);
-        plugin.getLogger().info("[DEBUG] Cleaned up vault session for quitting player " + event.getPlayer().getName());
     }
 }

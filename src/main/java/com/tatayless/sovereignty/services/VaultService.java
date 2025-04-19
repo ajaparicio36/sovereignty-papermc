@@ -39,7 +39,9 @@ public class VaultService {
     }
 
     public void initialize() {
+        plugin.getLogger().info("Initializing VaultService...");
         loadVaults();
+        plugin.getLogger().info("VaultService initialization complete");
     }
 
     public void loadVaults() {
@@ -101,6 +103,22 @@ public class VaultService {
     }
 
     private void openVaultPage(Player player, NationVault vault, int page) {
+        UUID playerUuid = player.getUniqueId();
+        VaultSession currentSession = playerSessions.get(playerUuid);
+
+        if (currentSession != null) {
+            plugin.getVaultUpdateManager().unregisterNationVaultViewer(
+                    vault.getId(), playerUuid, currentSession.getPage());
+
+            if (player.getOpenInventory() != null && player.getOpenInventory().getTopInventory() != null) {
+                if (player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {
+                    plugin.getLogger().info("[DEBUG] Saving current page before opening new one");
+                    updateVaultPageFromInventory(player.getOpenInventory().getTopInventory(),
+                            vault, currentSession.getPage());
+                }
+            }
+        }
+
         Nation nation = nationService.getNation(vault.getNationId());
         if (nation == null) {
             player.sendMessage(plugin.getLocalizationManager().getComponent("vault.error.nation-not-found"));
@@ -118,12 +136,6 @@ public class VaultService {
         int totalRows = Math.min(6, baseRows + additionalRows);
         int size = totalRows * 9;
 
-        VaultSession currentSession = playerSessions.get(player.getUniqueId());
-        if (currentSession != null) {
-            plugin.getVaultUpdateManager().unregisterNationVaultViewer(vault.getId(), player.getUniqueId(),
-                    currentSession.getPage());
-        }
-
         Inventory inventory = Bukkit.createInventory(null, size,
                 net.kyori.adventure.text.Component
                         .text("Nation Vault: " + nation.getName() + " (Page " + (page + 1) + ")"));
@@ -131,9 +143,7 @@ public class VaultService {
         ItemStack[] pageItems = vault.getPageItems(page);
         if (pageItems != null) {
             for (int i = 0; i < Math.min(pageItems.length, size); i++) {
-                if (i == PREV_PAGE_SLOT && totalRows == 6)
-                    continue;
-                if (i == NEXT_PAGE_SLOT && totalRows == 6)
+                if ((i == PREV_PAGE_SLOT || i == NEXT_PAGE_SLOT) && totalRows == 6)
                     continue;
 
                 inventory.setItem(i, pageItems[i]);
@@ -143,22 +153,19 @@ public class VaultService {
         if (totalRows == 6) {
             if (page > 0) {
                 inventory.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.ARROW, "Previous Page"));
-            } else {
-                inventory.setItem(PREV_PAGE_SLOT, null);
+                plugin.getLogger().info("[DEBUG] Added previous page button");
             }
 
             if (page < maxPages - 1) {
                 inventory.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.ARROW, "Next Page"));
-            } else {
-                inventory.setItem(NEXT_PAGE_SLOT, null);
+                plugin.getLogger().info("[DEBUG] Added next page button");
             }
         }
 
-        playerSessions.put(player.getUniqueId(), new VaultSession(vault.getNationId(), page));
-        plugin.getVaultUpdateManager().registerNationVaultViewer(vault.getId(), player.getUniqueId(), page);
+        playerSessions.put(playerUuid, new VaultSession(vault.getNationId(), page));
+        plugin.getVaultUpdateManager().registerNationVaultViewer(vault.getId(), playerUuid, page);
 
-        Bukkit.getScheduler().runTask(plugin, () -> player.openInventory(inventory));
-
+        player.openInventory(inventory);
         plugin.getLogger()
                 .info("[DEBUG] Opened vault " + vault.getId() + " page " + page + " for player " + player.getName());
     }
@@ -186,6 +193,9 @@ public class VaultService {
 
     public void navigateToNextPage(Player player) {
         UUID playerUuid = player.getUniqueId();
+
+        plugin.getLogger().info("[DEBUG] Starting navigation to next page for " + player.getName());
+
         if (!playerSessions.containsKey(playerUuid)) {
             plugin.getLogger().warning(
                     "[DEBUG] No active session found for player " + player.getName() + " during next page navigation");
@@ -193,13 +203,20 @@ public class VaultService {
         }
 
         VaultSession session = playerSessions.get(playerUuid);
-        plugin.getLogger().info("[DEBUG] Navigating to next page: Current page=" + session.getPage() + " for player="
-                + player.getName() + " nation=" + session.getNationId());
-        navigateVault(player, session.getNationId(), session.getPage() + 1);
+        plugin.getLogger()
+                .info("[DEBUG] Current session - Nation: " + session.getNationId() + ", Page: " + session.getPage());
+
+        int nextPage = session.getPage() + 1;
+        plugin.getLogger().info("[DEBUG] Attempting to navigate to page " + nextPage);
+
+        openVaultPage(player, session.getNationId(), nextPage);
     }
 
     public void navigateToPreviousPage(Player player) {
         UUID playerUuid = player.getUniqueId();
+
+        plugin.getLogger().info("[DEBUG] Starting navigation to previous page for " + player.getName());
+
         if (!playerSessions.containsKey(playerUuid)) {
             plugin.getLogger().warning("[DEBUG] No active session found for player " + player.getName()
                     + " during previous page navigation");
@@ -207,70 +224,17 @@ public class VaultService {
         }
 
         VaultSession session = playerSessions.get(playerUuid);
-        plugin.getLogger().info("[DEBUG] Navigating to previous page: Current page=" + session.getPage()
-                + " for player=" + player.getName() + " nation=" + session.getNationId());
-        navigateVault(player, session.getNationId(), session.getPage() - 1);
-    }
+        plugin.getLogger()
+                .info("[DEBUG] Current session - Nation: " + session.getNationId() + ", Page: " + session.getPage());
 
-    private void navigateVault(Player player, String nationId, int newPage) {
-        UUID playerUuid = player.getUniqueId();
-        VaultSession session = playerSessions.get(playerUuid);
-        if (session == null) {
-            plugin.getLogger().warning("[DEBUG] Cannot navigate - session not found for player: " + player.getName());
+        int prevPage = session.getPage() - 1;
+        if (prevPage < 0) {
+            plugin.getLogger().info("[DEBUG] Cannot navigate to page " + prevPage + " (before page 0)");
             return;
         }
 
-        NationVault vault = nationVaults.get(nationId);
-        if (vault == null) {
-            plugin.getLogger().warning("[DEBUG] Cannot navigate - vault not found for nation: " + nationId);
-            player.closeInventory();
-            playerSessions.remove(playerUuid);
-            return;
-        }
-
-        int currentPage = session.getPage();
-        plugin.getLogger().info(
-                "[DEBUG] Starting navigation for " + player.getName() + " from page " + currentPage + " to " + newPage);
-
-        InventoryView openInventoryView = player.getOpenInventory();
-        String currentTitle = openInventoryView.title().toString();
-        if (currentTitle.startsWith("Nation Vault:") && currentTitle.contains("Page " + (currentPage + 1))) {
-            try {
-                plugin.getLogger().info("[DEBUG] Saving current page " + currentPage + " before navigation for player "
-                        + player.getName());
-                boolean changed = updateVaultPageFromInventory(openInventoryView.getTopInventory(), vault, currentPage);
-                if (changed) {
-                    storageManager.saveVault(vault).thenAccept(success -> {
-                        plugin.getLogger()
-                                .info("[DEBUG] Pre-navigation save (page " + currentPage + ") result: " + success);
-                        if (success) {
-                            plugin.getVaultUpdateManager().updateNationVaultViewers(
-                                    vault.getId(),
-                                    currentPage,
-                                    playerUuid,
-                                    openInventoryView.getTopInventory());
-                        }
-                    }).exceptionally(ex -> {
-                        plugin.getLogger().log(Level.SEVERE,
-                                "[ERROR] Exception saving vault page " + currentPage + " during navigation", ex);
-                        return null;
-                    });
-                } else {
-                    plugin.getLogger()
-                            .info("[DEBUG] Current page " + currentPage + " unchanged, skipping pre-navigation save.");
-                }
-            } catch (Exception e) {
-                plugin.getLogger().log(Level.SEVERE,
-                        "[ERROR] Error saving page " + currentPage + " before navigation: " + e.getMessage(), e);
-            }
-        } else {
-            plugin.getLogger().warning("[DEBUG] Player " + player.getName() + " view title '" + currentTitle
-                    + "' did not match expected page " + currentPage + " during navigation save.");
-        }
-
-        openVaultPage(player, vault, newPage);
-
-        plugin.getLogger().info("[DEBUG] Navigation complete for " + player.getName() + ". Now on page " + newPage);
+        plugin.getLogger().info("[DEBUG] Attempting to navigate to page " + prevPage);
+        openVaultPage(player, session.getNationId(), prevPage);
     }
 
     public void handleInventoryClick(InventoryClickEvent event) {
@@ -290,134 +254,94 @@ public class VaultService {
 
     public void updateAndSaveVaultForPlayer(Player player) {
         UUID playerUuid = player.getUniqueId();
-        VaultSession session = playerSessions.get(playerUuid);
 
+        plugin.getLogger().info("[DEBUG] Updating and saving vault for " + player.getName());
+
+        VaultSession session = playerSessions.get(playerUuid);
         if (session == null) {
-            plugin.getLogger()
-                    .warning("[DEBUG] Cannot update vault - no session found for player: " + player.getName());
+            plugin.getLogger().warning("[DEBUG] No session found for " + player.getName());
             return;
         }
 
-        InventoryView openInventoryView = player.getOpenInventory();
-        String currentTitle = openInventoryView.title().toString();
-        if (openInventoryView.getTopInventory() == null || !currentTitle.startsWith("Nation Vault:")
-                || !currentTitle.contains("Page " + (session.getPage() + 1))) {
-            plugin.getLogger().warning("[DEBUG] Cannot update vault - player " + player.getName()
-                    + " is no longer viewing the expected vault page or inventory is invalid. Current view: "
-                    + currentTitle);
+        InventoryView view = player.getOpenInventory();
+        if (view == null) {
+            plugin.getLogger().warning("[DEBUG] No open inventory for " + player.getName());
+            return;
+        }
+
+        String title = view.title().toString();
+        if (!title.startsWith("Nation Vault:")) {
+            plugin.getLogger().warning("[DEBUG] Player not viewing a vault: " + title);
             return;
         }
 
         NationVault vault = nationVaults.get(session.getNationId());
         if (vault == null) {
-            plugin.getLogger().severe(
-                    "[ERROR] Cannot update vault - Vault object not found for nation: " + session.getNationId());
+            plugin.getLogger().severe("[DEBUG] Vault not found for nation " + session.getNationId());
             return;
         }
 
-        try {
-            plugin.getLogger().info("[DEBUG] Updating vault page " + session.getPage() + " for nation "
-                    + session.getNationId() + " from player " + player.getName() + "'s view.");
+        boolean changed = updateVaultPageFromInventory(view.getTopInventory(), vault, session.getPage());
 
-            Inventory topInventory = openInventoryView.getTopInventory();
-            if (plugin.getLogger().isLoggable(Level.FINE)) {
-                StringBuilder sb = new StringBuilder("[DEBUG] Inventory state before update (Page ")
-                        .append(session.getPage()).append("):\n");
-                for (int i = 0; i < topInventory.getSize(); i++) {
-                    ItemStack item = topInventory.getItem(i);
-                    if (item != null && !item.getType().isAir()) {
-                        sb.append("  Slot ").append(i).append(": ").append(item.getType()).append(" x ")
-                                .append(item.getAmount()).append("\n");
-                    }
+        if (changed) {
+            plugin.getLogger().info("[DEBUG] Vault contents changed, saving...");
+            saveVault(vault).thenAccept(success -> {
+                plugin.getLogger().info("[DEBUG] Vault save result: " + success);
+                if (success) {
+                    plugin.getVaultUpdateManager().updateNationVaultViewers(
+                            vault.getId(),
+                            session.getPage(),
+                            playerUuid,
+                            view.getTopInventory());
                 }
-                plugin.getLogger().fine(sb.toString());
-            }
-
-            boolean changed = updateVaultPageFromInventory(topInventory, vault, session.getPage());
-
-            if (changed) {
-                plugin.getLogger()
-                        .info("[DEBUG] Vault page " + session.getPage() + " changed. Triggering async save...");
-                storageManager.saveVault(vault).thenAccept(success -> {
-                    if (success) {
-                        plugin.getLogger().info("[DEBUG] Successfully saved vault " + vault.getId() + " page "
-                                + session.getPage() + " after update by " + player.getName());
-                        plugin.getVaultUpdateManager().updateNationVaultViewers(
-                                vault.getId(),
-                                session.getPage(),
-                                playerUuid,
-                                topInventory);
-                    } else {
-                        plugin.getLogger().warning("[DEBUG] Failed to save vault " + vault.getId() + " page "
-                                + session.getPage() + " after update by " + player.getName());
-                    }
-                }).exceptionally(ex -> {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "[ERROR] Exception during async vault save callback for " + vault.getId() + " page "
-                                    + session.getPage(),
-                            ex);
-                    return null;
-                });
-            } else {
-                plugin.getLogger()
-                        .info("[DEBUG] Vault page " + session.getPage() + " not changed. Skipping save trigger.");
-            }
-
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE,
-                    "[ERROR] Error updating and saving vault for player " + player.getName() + ": " + e.getMessage(),
-                    e);
+            });
+        } else {
+            plugin.getLogger().info("[DEBUG] No changes detected in vault");
         }
     }
 
     private boolean updateVaultPageFromInventory(Inventory inventory, NationVault vault, int page) {
         try {
             int size = inventory.getSize();
+            plugin.getLogger().info("[DEBUG] Updating vault page " + page + " with inventory of size " + size);
+
             ItemStack[] currentContents = vault.getPageItems(page);
-            if (currentContents.length != size) {
-                plugin.getLogger().warning("[DEBUG] Vault object page " + page + " size (" + currentContents.length
-                        + ") differs from inventory size (" + size + "). Resizing.");
-                currentContents = Arrays.copyOf(currentContents, size);
+            if (currentContents == null || currentContents.length != size) {
+                currentContents = new ItemStack[size];
+                plugin.getLogger().info("[DEBUG] Created new item array for page " + page);
             }
 
             ItemStack[] newContents = new ItemStack[size];
             boolean changed = false;
-            int itemCount = 0;
 
             for (int i = 0; i < size; i++) {
                 ItemStack itemInInventory = inventory.getItem(i);
 
                 if ((i == PREV_PAGE_SLOT || i == NEXT_PAGE_SLOT) && isNavigationButton(itemInInventory)) {
                     newContents[i] = null;
-                } else {
-                    newContents[i] = itemInInventory != null ? itemInInventory.clone() : null;
-                    if (newContents[i] != null) {
-                        itemCount++;
-                    }
+                    continue;
                 }
 
-                if (!Objects.equals(currentContents[i], newContents[i])) {
+                newContents[i] = itemInInventory != null ? itemInInventory.clone() : null;
+
+                boolean slotChanged = !Objects.equals(currentContents[i], newContents[i]);
+                if (slotChanged) {
                     changed = true;
-                    if (plugin.getLogger().isLoggable(Level.INFO)) {
-                        plugin.getLogger().info("[DEBUG] Change detected at slot " + i + ": OLD=" + currentContents[i]
-                                + ", NEW=" + newContents[i]);
-                    }
+                    plugin.getLogger().info("[DEBUG] Change detected in slot " + i);
                 }
             }
 
             if (changed) {
-                plugin.getLogger()
-                        .info("[DEBUG] Updating vault object for page " + page + " with " + itemCount + " items.");
+                plugin.getLogger().info("[DEBUG] Updating vault page " + page + " with new contents");
                 vault.setPageItems(page, newContents);
             } else {
-                plugin.getLogger().info(
-                        "[DEBUG] No changes detected between inventory view and vault object for page " + page);
+                plugin.getLogger().info("[DEBUG] No changes detected in vault page " + page);
             }
 
             return changed;
+
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE,
-                    "[ERROR] Error in updateVaultPageFromInventory for page " + page + ": " + e.getMessage(), e);
+            plugin.getLogger().log(Level.SEVERE, "[ERROR] Error updating vault: " + e.getMessage(), e);
             return false;
         }
     }
@@ -576,7 +500,7 @@ public class VaultService {
     public static class NationVault {
         private final String id;
         private final String nationId;
-        private Map<Integer, ItemStack[]> pages; // Changed from public to private
+        private Map<Integer, ItemStack[]> pages;
         private ItemStack[] overflowItems;
         private Date overflowExpiry;
 
@@ -584,7 +508,6 @@ public class VaultService {
                 ItemStack[] overflowItems, Date overflowExpiry) {
             this.id = id;
             this.nationId = nationId;
-            // Ensure pages is never null, even if null is passed in
             this.pages = pages != null ? new HashMap<>(pages) : new HashMap<>();
             this.overflowItems = overflowItems;
             this.overflowExpiry = overflowExpiry;
@@ -599,7 +522,6 @@ public class VaultService {
         }
 
         public Map<Integer, ItemStack[]> getPages() {
-            // Ensure the map is never null when accessed
             if (this.pages == null) {
                 this.pages = new HashMap<>();
             }
