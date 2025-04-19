@@ -156,6 +156,10 @@ public class TradeNPCHandler {
                         npc[0].setAI(false);
                         npc[0].setInvulnerable(true);
                         npc[0].setSilent(true);
+                        npc[0].setRemoveWhenFarAway(false);
+                        // Additional invulnerability settings
+                        npc[0].setCollidable(false); // Prevents physical interaction
+                        npc[0].setPersistent(true); // Makes the entity persistent
                     });
 
                     // Wait for entity to be created
