@@ -41,7 +41,6 @@ public class NationService {
                     String id = record.get("id", String.class);
                     String name = record.get("name", String.class);
                     double power = record.get("power", Double.class);
-                    @SuppressWarnings("unused")
                     int powerLevel = record.get("power_level", Integer.class);
 
                     // Load admin power flag (default to false if column doesn't exist)
@@ -55,6 +54,7 @@ public class NationService {
                     Nation nation = new Nation(id, name);
                     nation.setPower(power); // Set power first
                     nation.setAdminSetPower(adminSetPower); // Then set the flag
+                    nation.setPowerLevel(powerLevel); // Explicitly set the power level from database
 
                     // Load claimed chunks
                     String claimedChunksJson = record.get("claimed_chunks", String.class);

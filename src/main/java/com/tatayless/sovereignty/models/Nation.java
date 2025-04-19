@@ -81,6 +81,11 @@ public class Nation {
         return powerLevel;
     }
 
+    // Add method to explicitly set power level
+    public void setPowerLevel(int powerLevel) {
+        this.powerLevel = powerLevel;
+    }
+
     public Set<ChunkLocation> getClaimedChunks() {
         return Collections.unmodifiableSet(claimedChunks);
     }
