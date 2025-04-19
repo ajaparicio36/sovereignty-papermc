@@ -11,6 +11,11 @@ commands:
     usage: /nation <subcommand>
     aliases: [n]
     permission: sovereignty.command.nation
+  nationadmin:
+    description: Nation admin commands
+    usage: /nationadmin <subcommand>
+    aliases: [na]
+    permission: sovereignty.command.nationadmin
   war:
     description: War management commands
     usage: /war <subcommand>
@@ -42,6 +47,9 @@ permissions:
   sovereignty.command.nation:
     description: Use the nation command
     default: true
+  sovereignty.command.nationadmin:
+    description: Use the nation admin command
+    default: op
   sovereignty.command.war:
     description: Use the war command
     default: true
