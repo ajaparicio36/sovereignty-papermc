@@ -5,9 +5,8 @@ import com.google.gson.reflect.TypeToken;
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.DatabaseOperation;
 import com.tatayless.sovereignty.models.Nation;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -29,7 +28,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 public class VaultService {
     private final Sovereignty plugin;
@@ -69,7 +68,6 @@ public class VaultService {
 
                         if (itemsJson != null && !itemsJson.isEmpty()) {
                             try {
-                                // First check if the format is the new map-based format
                                 Map<String, List<Map<String, Object>>> pagesMap = gson.fromJson(itemsJson,
                                         new TypeToken<Map<String, List<Map<String, Object>>>>() {
                                         }.getType());
@@ -85,7 +83,6 @@ public class VaultService {
                                     }
                                 }
                             } catch (Exception e) {
-                                // If this fails, try the old format (single array of items)
                                 try {
                                     List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
                                             new TypeToken<List<Map<String, Object>>>() {
@@ -109,7 +106,6 @@ public class VaultService {
                             if (overflowExpiryObj instanceof Timestamp) {
                                 overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
                             } else if (overflowExpiryObj instanceof String) {
-                                // SQLite dates are stored as strings
                                 LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
                                 overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
                             }
@@ -119,7 +115,6 @@ public class VaultService {
                         nationVaults.put(nationId, vault);
                     }
 
-                    // Load vault NPCs
                     Result<Record> npcResults = context.select().from("vault_npcs").fetch();
 
                     for (Record record : npcResults) {
@@ -130,13 +125,11 @@ public class VaultService {
 
                     plugin.getLogger().info("Loaded " + nationVaults.size() + " nation vaults from database");
 
-                    // Start a task to clean up expired overflow items
                     scheduleOverflowCleanup();
 
                     return null;
                 }
             });
-
         });
     }
 
@@ -158,7 +151,7 @@ public class VaultService {
                     saveVault(vault);
                 }
             }
-        }.runTaskTimerAsynchronously(plugin, 1200, 1200); // Run every minute (20 ticks/sec * 60 sec)
+        }.runTaskTimerAsynchronously(plugin, 1200, 1200);
     }
 
     public void openVault(Player player, String nationId) {
@@ -171,11 +164,36 @@ public class VaultService {
         getOrCreateVault(nationId).thenAccept(vault -> {
             if (vault != null) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    // Open the first page of the vault
                     openVaultPage(player, vault, 0);
-
-                    // Create a session for the player
                     playerSessions.put(player.getUniqueId(), new VaultSession(nationId, 0));
+                });
+            } else {
+                player.sendMessage(plugin.getLocalizationManager().getComponent("vault.no-vault"));
+            }
+        });
+    }
+
+    public void openVaultPage(Player player, String nationId, int page) {
+        Nation nation = nationService.getNation(nationId);
+        if (nation == null) {
+            player.sendMessage(plugin.getLocalizationManager().getComponent("vault.no-vault"));
+            return;
+        }
+
+        getOrCreateVault(nationId).thenAccept(vault -> {
+            if (vault != null) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    int maxPages = calculateMaxPages(nation.getPowerLevel());
+                    int adjustedPage = page;
+                    if (adjustedPage >= maxPages) {
+                        adjustedPage = maxPages - 1;
+                    }
+                    if (adjustedPage < 0) {
+                        adjustedPage = 0;
+                    }
+
+                    openVaultPage(player, vault, adjustedPage);
+                    playerSessions.put(player.getUniqueId(), new VaultSession(nationId, adjustedPage));
                 });
             } else {
                 player.sendMessage(plugin.getLocalizationManager().getComponent("vault.no-vault"));
@@ -188,40 +206,38 @@ public class VaultService {
         if (nation == null)
             return;
 
-        // Calculate the vault size based on power level
         int baseRows = plugin.getConfigManager().getBaseVaultRows();
         int additionalRows = plugin.getConfigManager().getAdditionalRowsPerPowerLevel() * (nation.getPowerLevel() - 1);
-        int totalRows = Math.min(6, baseRows + additionalRows); // Cap at 6 rows per page
+        int totalRows = Math.min(6, baseRows + additionalRows);
         int size = totalRows * 9;
 
         Inventory inventory = Bukkit.createInventory(null, size,
                 net.kyori.adventure.text.Component
                         .text("Nation Vault: " + nation.getName() + " (Page " + (page + 1) + ")"));
 
-        // Get items for this page
         ItemStack[] pageItems = vault.getPageItems(page);
         if (pageItems != null) {
-            // Copy items to avoid modifying the stored array
-            ItemStack[] displayItems = new ItemStack[size];
-            System.arraycopy(pageItems, 0, displayItems, 0, Math.min(pageItems.length, size));
-            inventory.setContents(displayItems);
+            for (int i = 0; i < Math.min(pageItems.length, size); i++) {
+                if ((i == PREV_PAGE_SLOT || i == NEXT_PAGE_SLOT) && size - i <= 9) {
+                    continue;
+                }
+                inventory.setItem(i, pageItems[i]);
+            }
         }
 
-        // Add navigation buttons - do this AFTER setting the inventory contents
-        if (page > 0) {
-            inventory.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.ARROW, "Previous Page"));
-        }
+        if (totalRows == 6) {
+            if (page > 0) {
+                inventory.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.ARROW, "Previous Page"));
+            }
 
-        // Check if we need a next page button (if there are more pages or overflow
-        // items)
-        int maxPages = calculateMaxPages(nation.getPowerLevel());
-        if ((page < maxPages - 1) || (page == maxPages - 1 && vault.hasOverflow())) {
-            inventory.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.ARROW, "Next Page"));
+            int maxPages = calculateMaxPages(nation.getPowerLevel());
+            if ((page < maxPages - 1) || (page == maxPages - 1 && vault.hasOverflow())) {
+                inventory.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.ARROW, "Next Page"));
+            }
         }
 
         player.openInventory(inventory);
 
-        // Register player as viewer for this vault page for real-time updates
         plugin.getVaultUpdateManager().registerNationVaultViewer(vault.getId(), player.getUniqueId(), page);
     }
 
@@ -243,18 +259,15 @@ public class VaultService {
     }
 
     public CompletableFuture<NationVault> getOrCreateVault(String nationId) {
-        // Check if vault exists in memory
         NationVault vault = nationVaults.get(nationId);
         if (vault != null) {
             return CompletableFuture.completedFuture(vault);
         }
 
-        // Create new vault
         return CompletableFuture.supplyAsync(() -> {
             return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<NationVault>() {
                 @Override
                 public NationVault execute(Connection conn, DSLContext context) throws SQLException {
-                    // Check if vault exists in DB
                     Record record = context.select().from("nation_vaults")
                             .where(DSL.field("nation_id").eq(nationId))
                             .fetchOne();
@@ -271,11 +284,9 @@ public class VaultService {
 
                         if (itemsJson != null && !itemsJson.isEmpty()) {
                             try {
-                                // Try new format first (map of pages)
                                 Map<String, List<Map<String, Object>>> pagesMap = gson.fromJson(itemsJson,
                                         new TypeToken<Map<String, List<Map<String, Object>>>>() {
                                         }.getType());
-
                                 for (String pageKey : pagesMap.keySet()) {
                                     try {
                                         int pageNum = Integer.parseInt(pageKey);
@@ -287,7 +298,6 @@ public class VaultService {
                                     }
                                 }
                             } catch (Exception e) {
-                                // Fall back to old format (single array)
                                 try {
                                     List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
                                             new TypeToken<List<Map<String, Object>>>() {
@@ -311,7 +321,6 @@ public class VaultService {
                             if (overflowExpiryObj instanceof Timestamp) {
                                 overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
                             } else if (overflowExpiryObj instanceof String) {
-                                // SQLite dates are stored as strings
                                 LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
                                 overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
                             }
@@ -323,7 +332,6 @@ public class VaultService {
                         return existingVault;
                     }
 
-                    // Create new vault in DB
                     String vaultId = UUID.randomUUID().toString();
                     context.insertInto(
                             DSL.table("nation_vaults"),
@@ -338,7 +346,6 @@ public class VaultService {
                     return newVault;
                 }
             });
-
         });
     }
 
@@ -346,52 +353,39 @@ public class VaultService {
         Player player = (Player) event.getWhoClicked();
         UUID playerUuid = player.getUniqueId();
 
-        // Check if player has an active vault session
         if (!playerSessions.containsKey(playerUuid))
             return;
 
         VaultSession session = playerSessions.get(playerUuid);
         String title = event.getView().title().toString();
 
-        // Verify this is a vault inventory
         if (!title.startsWith("Nation Vault:"))
             return;
 
-        // Handle navigation buttons - cancel all interactions with them
-        if ((event.getSlot() == NEXT_PAGE_SLOT && isNavigationButton(event.getCurrentItem())) ||
-                (event.getSlot() == PREV_PAGE_SLOT && isNavigationButton(event.getCurrentItem()))) {
-            event.setCancelled(true);
+        if ((event.getSlot() == NEXT_PAGE_SLOT || event.getSlot() == PREV_PAGE_SLOT)) {
+            if (isNavigationButton(event.getCurrentItem()) && event.getClick().isLeftClick()) {
+                event.setCancelled(true);
 
-            // Handle actual navigation when clicking the buttons
-            if (event.getClick().isLeftClick()) {
                 if (event.getSlot() == NEXT_PAGE_SLOT) {
                     navigateVault(player, session.getNationId(), session.getPage() + 1);
                 } else {
                     navigateVault(player, session.getNationId(), session.getPage() - 1);
                 }
             }
-            return;
-        }
-
-        // Also prevent navigation buttons from being taken via shift-click or other
-        // methods
-        if (isNavigationButton(event.getCurrentItem()) ||
-                (event.getClick().isShiftClick() &&
-                        (event.getSlot() == NEXT_PAGE_SLOT || event.getSlot() == PREV_PAGE_SLOT))) {
             event.setCancelled(true);
             return;
         }
 
-        // If click wasn't cancelled, schedule an update for the next tick
+        if (isNavigationButton(event.getCurrentItem())) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (!event.isCancelled()) {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                // Update vault for all other players viewing this page
                 NationVault vault = nationVaults.get(session.getNationId());
                 if (vault != null) {
-                    // Update the vault content after the click is processed
                     updateVaultPage(player, vault, session.getPage());
-
-                    // Broadcast changes to other viewers
                     plugin.getVaultUpdateManager().updateNationVaultViewers(
                             vault.getId(),
                             session.getPage(),
@@ -419,17 +413,13 @@ public class VaultService {
 
         VaultSession session = playerSessions.get(player.getUniqueId());
 
-        // Unregister from the current page
         plugin.getVaultUpdateManager().unregisterNationVaultViewer(vault.getId(), player.getUniqueId(),
                 session.getPage());
 
-        // Update the current page inventory before switching
         updateVaultPage(player, vault, session.getPage());
 
-        // Open the new page
         openVaultPage(player, vault, newPage);
 
-        // Update the session
         session.setPage(newPage);
     }
 
@@ -437,28 +427,32 @@ public class VaultService {
         Player player = (Player) event.getPlayer();
         UUID playerUuid = player.getUniqueId();
 
-        // Check if player has an active vault session
         if (!playerSessions.containsKey(playerUuid))
             return;
 
         VaultSession session = playerSessions.get(playerUuid);
         String title = event.getView().title().toString();
 
-        // Verify this is a vault inventory
         if (!title.startsWith("Nation Vault:"))
             return;
 
-        // Update the vault with the contents of this inventory
         NationVault vault = nationVaults.get(session.getNationId());
         if (vault != null) {
             updateVaultPage(player, vault, session.getPage());
+            saveVault(vault).thenAccept(success -> {
+                if (success) {
+                    plugin.getLogger().info("Vault for nation " + session.getNationId() +
+                            " page " + session.getPage() + " saved successfully");
+                } else {
+                    plugin.getLogger().warning("Failed to save vault for nation " +
+                            session.getNationId() + " page " + session.getPage());
+                }
+            });
         }
 
-        // Unregister player from the vault viewers
         plugin.getVaultUpdateManager().unregisterNationVaultViewer(vault.getId(), player.getUniqueId(),
                 session.getPage());
 
-        // Remove the session when the player closes the last vault inventory
         if (!player.getOpenInventory().title().toString().startsWith("Nation Vault:")) {
             playerSessions.remove(playerUuid);
         }
@@ -467,22 +461,18 @@ public class VaultService {
     private void updateVaultPage(Player player, NationVault vault, int page) {
         Inventory inventory = player.getOpenInventory().getTopInventory();
 
-        // Create a copy of the inventory contents, preserving the navigation buttons
-        // position but not saving them
         ItemStack[] contents = new ItemStack[inventory.getSize()];
 
         for (int i = 0; i < contents.length; i++) {
-            // Skip navigation button slots
-            if (i == PREV_PAGE_SLOT || i == NEXT_PAGE_SLOT) {
+            if ((i == PREV_PAGE_SLOT || i == NEXT_PAGE_SLOT) &&
+                    ((inventory.getSize() - i <= 9) && isNavigationButton(inventory.getItem(i)))) {
                 continue;
             }
             contents[i] = inventory.getItem(i);
         }
 
-        // Update the vault with the new contents
         vault.setPageItems(page, contents);
 
-        // Save the vault asynchronously
         saveVault(vault);
     }
 
@@ -491,7 +481,6 @@ public class VaultService {
             return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
                 @Override
                 public Boolean execute(Connection conn, DSLContext context) throws SQLException {
-                    // Serialize vault pages as map
                     Map<String, List<Map<String, Object>>> pagesMap = new HashMap<>();
                     for (Map.Entry<Integer, ItemStack[]> entry : vault.getPages().entrySet()) {
                         if (entry.getValue() != null) {
@@ -506,7 +495,6 @@ public class VaultService {
                         overflowItemsJson = gson.toJson(serializeItems(vault.getOverflowItems()));
                     }
 
-                    // Update vault
                     context.update(DSL.table("nation_vaults"))
                             .set(DSL.field("items"), itemsJson)
                             .set(DSL.field("overflow_items"), overflowItemsJson)
@@ -523,214 +511,6 @@ public class VaultService {
         });
     }
 
-    public CompletableFuture<Boolean> createOrMoveVaultNPC(String nationId, Location location, String playerId) {
-        Nation nation = nationService.getNation(nationId);
-        if (nation == null || !nation.isOfficer(playerId)) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return getOrCreateVault(nationId).thenCompose(vault -> {
-            if (vault == null) {
-                return CompletableFuture.completedFuture(false);
-            }
-
-            // Check if the nation already has an NPC
-            Integer existingEntityId = getVaultNPCEntityId(nationId);
-
-            if (existingEntityId != null) {
-                // Move the existing NPC to the new location
-                return moveVaultNPC(existingEntityId, location);
-            } else {
-                // Create a new NPC
-                return createNewVaultNPC(vault, nationId, location);
-            }
-        });
-    }
-
-    private CompletableFuture<Boolean> moveVaultNPC(int entityId, Location location) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                CompletableFuture<Void> future = new CompletableFuture<>();
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    for (org.bukkit.entity.Entity entity : Bukkit.getWorlds().stream()
-                            .flatMap(world -> world.getEntities().stream())
-                            .collect(Collectors.toList())) {
-                        if (entity.getEntityId() == entityId && entity instanceof Villager) {
-                            entity.teleport(location);
-                            break;
-                        }
-                    }
-                    future.complete(null);
-                });
-                future.get(); // Wait for task to complete
-
-                // Update location in database
-                String vaultId = entityToVault.get(entityId);
-                if (vaultId != null) {
-                    plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
-                        @Override
-                        public Boolean execute(Connection conn, DSLContext context) throws SQLException {
-                            String locationStr = String.format("%f,%f,%f,%s",
-                                    location.getX(), location.getY(), location.getZ(),
-                                    location.getWorld().getName());
-
-                            context.update(DSL.table("vault_npcs"))
-                                    .set(DSL.field("coordinates"), locationStr)
-                                    .where(DSL.field("entity_id").eq(entityId))
-                                    .execute();
-
-                            return true;
-                        }
-                    });
-                }
-
-                return true;
-            } catch (Exception e) {
-                plugin.getLogger().severe("Failed to move vault NPC: " + e.getMessage());
-                return false;
-            }
-        });
-    }
-
-    private CompletableFuture<Boolean> createNewVaultNPC(NationVault vault, String nationId, Location location) {
-        return CompletableFuture.supplyAsync(() -> {
-            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
-                @Override
-                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
-                    Nation nation = nationService.getNation(nationId);
-                    if (nation == null)
-                        return false;
-
-                    // Create the NPC entity
-                    final Villager[] npc = { null };
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        npc[0] = (Villager) location.getWorld().spawnEntity(location, EntityType.VILLAGER);
-
-                        // Create stylized name for the vault NPC
-                        net.kyori.adventure.text.Component nameComponent = net.kyori.adventure.text.Component
-                                .text(nation.getName() + " ")
-                                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD)
-                                .append(net.kyori.adventure.text.Component
-                                        .text("Vault")
-                                        .color(net.kyori.adventure.text.format.NamedTextColor.AQUA)
-                                        .decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-
-                        npc[0].customName(nameComponent);
-                        npc[0].setCustomNameVisible(true);
-                        npc[0].setProfession(Villager.Profession.LIBRARIAN);
-                        npc[0].setAI(false);
-                        npc[0].setInvulnerable(true);
-                        npc[0].setSilent(true);
-                    });
-
-                    // Wait for entity to be created
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new SQLException("Thread interrupted", e);
-                    }
-
-                    // Store the NPC in database
-                    int entityId = npc[0].getEntityId();
-                    String npcId = UUID.randomUUID().toString();
-                    String locationStr = String.format("%f,%f,%f,%s",
-                            location.getX(), location.getY(), location.getZ(), location.getWorld().getName());
-
-                    context.insertInto(
-                            DSL.table("vault_npcs"),
-                            DSL.field("id"),
-                            DSL.field("nation_id"),
-                            DSL.field("nation_vault_id"),
-                            DSL.field("coordinates"),
-                            DSL.field("entity_id")).values(
-                                    npcId,
-                                    nationId,
-                                    vault.getId(),
-                                    locationStr,
-                                    entityId)
-                            .execute();
-
-                    entityToVault.put(entityId, vault.getId());
-                    return true;
-                }
-            });
-        });
-    }
-
-    public CompletableFuture<Boolean> removeVaultNPC(String nationId) {
-        Integer entityId = getVaultNPCEntityId(nationId);
-        if (entityId == null) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // Remove the entity
-                CompletableFuture<Void> future = new CompletableFuture<>();
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    for (org.bukkit.entity.Entity entity : Bukkit.getWorlds().stream()
-                            .flatMap(world -> world.getEntities().stream())
-                            .collect(Collectors.toList())) {
-                        if (entity.getEntityId() == entityId) {
-                            entity.remove();
-                            break;
-                        }
-                    }
-                    future.complete(null);
-                });
-                future.get(); // Wait for task to complete
-
-                // Remove from database
-                plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
-                    @Override
-                    public Boolean execute(Connection conn, DSLContext context) throws SQLException {
-                        context.deleteFrom(DSL.table("vault_npcs"))
-                                .where(DSL.field("nation_id").eq(nationId))
-                                .execute();
-                        return true;
-                    }
-                });
-
-                // Remove from tracking map
-                entityToVault.remove(entityId);
-
-                return true;
-            } catch (Exception e) {
-                plugin.getLogger().severe("Failed to remove vault NPC: " + e.getMessage());
-                return false;
-            }
-        });
-    }
-
-    public Integer getVaultNPCEntityId(String nationId) {
-        for (Map.Entry<Integer, String> entry : entityToVault.entrySet()) {
-            String vaultId = entry.getValue();
-            NationVault vault = findVaultById(vaultId);
-            if (vault != null && vault.getNationId().equals(nationId)) {
-                return entry.getKey();
-            }
-        }
-        return null;
-    }
-
-    private NationVault findVaultById(String vaultId) {
-        for (NationVault vault : nationVaults.values()) {
-            if (vault.getId().equals(vaultId)) {
-                return vault;
-            }
-        }
-        return null;
-    }
-
-    public boolean hasVaultNPC(String nationId) {
-        return getVaultNPCEntityId(nationId) != null;
-    }
-
-    public String getVaultIdFromEntity(int entityId) {
-        return entityToVault.get(entityId);
-    }
-
     private ItemStack[] deserializeItems(List<Map<String, Object>> itemsList) {
         if (itemsList == null)
             return null;
@@ -738,8 +518,6 @@ public class VaultService {
         List<ItemStack> items = new ArrayList<>();
         for (Map<String, Object> itemMap : itemsList) {
             try {
-                // This is a simplified version - in reality, you'd need to handle
-                // all ItemStack properties including metadata, enchantments, etc.
                 ItemStack item = ItemStack.deserialize(itemMap);
                 items.add(item);
             } catch (Exception e) {
@@ -767,6 +545,193 @@ public class VaultService {
         }
 
         return itemsList;
+    }
+
+    public String getVaultIdFromEntity(int entityId) {
+        return entityToVault.get(entityId);
+    }
+
+    public CompletableFuture<Boolean> removeVaultNPC(String nationId) {
+        return CompletableFuture.supplyAsync(() -> {
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    // Find entity IDs associated with this nation's vault
+                    List<Integer> entityIds = new ArrayList<>();
+
+                    for (Map.Entry<Integer, String> entry : entityToVault.entrySet()) {
+                        NationVault vault = nationVaults.get(nationId);
+                        if (vault != null && entry.getValue().equals(vault.getId())) {
+                            entityIds.add(entry.getKey());
+                        }
+                    }
+
+                    // Delete from database
+                    context.deleteFrom(DSL.table("vault_npcs"))
+                            .where(DSL.field("nation_vault_id").eq(
+                                    context.select(DSL.field("id"))
+                                            .from("nation_vaults")
+                                            .where(DSL.field("nation_id").eq(nationId))))
+                            .execute();
+
+                    // Remove from memory
+                    for (Integer entityId : entityIds) {
+                        entityToVault.remove(entityId);
+
+                        // Find and remove the entity from the world
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            for (org.bukkit.World world : Bukkit.getWorlds()) {
+                                for (Entity entity : world.getEntities()) {
+                                    if (entity.getEntityId() == entityId && entity instanceof Villager) {
+                                        entity.remove();
+                                        break;
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    return true;
+                }
+            });
+        });
+    }
+
+    public CompletableFuture<Boolean> createOrMoveVaultNPC(String nationId, Location location, String playerId) {
+        return CompletableFuture.supplyAsync(() -> {
+            return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
+                @Override
+                public Boolean execute(Connection conn, DSLContext context) throws SQLException {
+                    // Find the vault ID for this nation
+                    Record vaultRecord = context.select(DSL.field("id"))
+                            .from("nation_vaults")
+                            .where(DSL.field("nation_id").eq(nationId))
+                            .fetchOne();
+
+                    if (vaultRecord == null) {
+                        // Create a new vault if it doesn't exist
+                        String vaultId = UUID.randomUUID().toString();
+                        context.insertInto(
+                                DSL.table("nation_vaults"),
+                                DSL.field("id"),
+                                DSL.field("nation_id")).values(
+                                        vaultId,
+                                        nationId)
+                                .execute();
+
+                        // Get or create the vault in memory
+                        getOrCreateVault(nationId);
+
+                        vaultRecord = context.select(DSL.field("id"))
+                                .from("nation_vaults")
+                                .where(DSL.field("id").eq(vaultId))
+                                .fetchOne();
+                    }
+
+                    final String vaultId = vaultRecord.get(0, String.class);
+
+                    // Check if an NPC already exists
+                    Record npcRecord = context.select().from("vault_npcs")
+                            .where(DSL.field("nation_vault_id").eq(vaultId))
+                            .fetchOne();
+
+                    final boolean[] isNewNpc = { npcRecord == null };
+
+                    // Create the entity in the game world
+                    CompletableFuture<Integer> entityIdFuture = new CompletableFuture<>();
+
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        try {
+                            // If we have an existing NPC, remove it first
+                            if (!isNewNpc[0]) {
+                                int oldEntityId = npcRecord.get("entity_id", Integer.class);
+                                entityToVault.remove(oldEntityId);
+
+                                for (org.bukkit.World world : Bukkit.getWorlds()) {
+                                    for (Entity entity : world.getEntities()) {
+                                        if (entity.getEntityId() == oldEntityId && entity instanceof Villager) {
+                                            entity.remove();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Create a new villager
+                            Villager villager = (Villager) location.getWorld().spawnEntity(location,
+                                    EntityType.VILLAGER);
+
+                            // Configure the villager
+                            villager.setProfession(Villager.Profession.LIBRARIAN);
+                            villager.customName(net.kyori.adventure.text.Component.text("Nation Vault")
+                                    .color(net.kyori.adventure.text.format.NamedTextColor.GOLD));
+                            villager.setCustomNameVisible(true);
+                            villager.setAI(false);
+                            villager.setInvulnerable(true);
+                            villager.setSilent(true);
+
+                            int entityId = villager.getEntityId();
+                            entityToVault.put(entityId, vaultId);
+                            entityIdFuture.complete(entityId);
+                        } catch (Exception e) {
+                            plugin.getLogger().severe("Failed to create vault NPC: " + e.getMessage());
+                            entityIdFuture.completeExceptionally(e);
+                        }
+                    });
+
+                    try {
+                        // Wait for the entity to be created and get its ID
+                        int entityId = entityIdFuture.get(10, TimeUnit.SECONDS);
+
+                        if (isNewNpc[0]) {
+                            // Generate a new UUID for the NPC
+                            String npcId = UUID.randomUUID().toString();
+
+                            context.insertInto(
+                                    DSL.table("vault_npcs"),
+                                    DSL.field("id"),
+                                    DSL.field("nation_id"),
+                                    DSL.field("nation_vault_id"),
+                                    DSL.field("coordinates"),
+                                    DSL.field("entity_id"),
+                                    DSL.field("created_by"),
+                                    DSL.field("world"),
+                                    DSL.field("x"),
+                                    DSL.field("y"),
+                                    DSL.field("z")).values(
+                                            npcId,
+                                            nationId,
+                                            vaultId,
+                                            location.getX() + "," + location.getY() + "," +
+                                                    location.getZ() + "," + location.getWorld().getName(),
+                                            entityId,
+                                            playerId,
+                                            location.getWorld().getName(),
+                                            location.getX(),
+                                            location.getY(),
+                                            location.getZ())
+                                    .execute();
+                        } else {
+                            context.update(DSL.table("vault_npcs"))
+                                    .set(DSL.field("entity_id"), entityId)
+                                    .set(DSL.field("coordinates"), location.getX() + "," + location.getY() + "," +
+                                            location.getZ() + "," + location.getWorld().getName())
+                                    .set(DSL.field("world"), location.getWorld().getName())
+                                    .set(DSL.field("x"), location.getX())
+                                    .set(DSL.field("y"), location.getY())
+                                    .set(DSL.field("z"), location.getZ())
+                                    .where(DSL.field("nation_vault_id").eq(vaultId))
+                                    .execute();
+                        }
+
+                        return true;
+                    } catch (Exception e) {
+                        plugin.getLogger().severe("Failed to create/update vault NPC record: " + e.getMessage());
+                        return false;
+                    }
+                }
+            });
+        });
     }
 
     public static class NationVault {
@@ -798,11 +763,20 @@ public class VaultService {
         }
 
         public ItemStack[] getPageItems(int page) {
-            return pages.get(page);
+            ItemStack[] pageItems = pages.get(page);
+            if (pageItems == null) {
+                pageItems = new ItemStack[MAX_SINGLE_PAGE_SIZE];
+                pages.put(page, pageItems);
+            }
+            return pageItems;
         }
 
         public void setPageItems(int page, ItemStack[] items) {
-            pages.put(page, items);
+            if (items != null) {
+                ItemStack[] copy = new ItemStack[items.length];
+                System.arraycopy(items, 0, copy, 0, items.length);
+                pages.put(page, copy);
+            }
         }
 
         public boolean hasPage(int page) {
@@ -840,20 +814,16 @@ public class VaultService {
 
             List<ItemStack> allOverflow = new ArrayList<>();
 
-            // Add existing overflow items
             if (overflowItems != null) {
                 Collections.addAll(allOverflow, Arrays.stream(overflowItems)
                         .filter(Objects::nonNull)
                         .toArray(ItemStack[]::new));
             }
 
-            // Add new overflow items
             allOverflow.addAll(items);
 
-            // Set the overflow items
             this.overflowItems = allOverflow.toArray(new ItemStack[0]);
 
-            // Set expiry time
             Calendar calendar = Calendar.getInstance();
             calendar.add(Calendar.MINUTE, expiryMinutes);
             this.overflowExpiry = calendar.getTime();

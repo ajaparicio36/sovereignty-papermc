@@ -17,6 +17,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 public class TradeExecutionHandler {
@@ -66,25 +67,34 @@ public class TradeExecutionHandler {
                     Nation receivingNation = nationService.getNation(trade.getReceivingNationId());
                     if (receivingNation != null) {
                         // Get or create receiver's vault
-                        vaultService.getOrCreateVault(trade.getReceivingNationId()).thenAccept(receiverVault -> {
-                            if (receiverVault != null) {
-                                try {
-                                    // Add items to receiver's vault overflow
-                                    List<ItemStack> itemsList = Arrays.stream(items)
-                                            .filter(Objects::nonNull)
-                                            .collect(Collectors.toList());
+                        CompletableFuture<Boolean> transferFuture = vaultService
+                                .getOrCreateVault(trade.getReceivingNationId())
+                                .thenCompose(receiverVault -> {
+                                    if (receiverVault != null) {
+                                        try {
+                                            // Add items to receiver's vault overflow
+                                            List<ItemStack> itemsList = Arrays.stream(items)
+                                                    .filter(Objects::nonNull)
+                                                    .collect(Collectors.toList());
 
-                                    receiverVault.addOverflowItems(itemsList,
-                                            plugin.getConfigManager().getVaultExpiryTimeMinutes());
-                                    vaultService.saveVault(receiverVault);
+                                            receiverVault.addOverflowItems(itemsList,
+                                                    plugin.getConfigManager().getVaultExpiryTimeMinutes());
+                                            return vaultService.saveVault(receiverVault);
+                                        } catch (Exception e) {
+                                            plugin.getLogger()
+                                                    .severe("Error processing trade items: " + e.getMessage());
+                                            return CompletableFuture.completedFuture(false);
+                                        }
+                                    }
+                                    return CompletableFuture.completedFuture(false);
+                                });
 
-                                    // Mark trade successful
-                                    tradeSuccess[0] = true;
-                                } catch (Exception e) {
-                                    plugin.getLogger().severe("Error processing trade items: " + e.getMessage());
-                                }
-                            }
-                        });
+                        // Wait for the transfer to complete
+                        try {
+                            tradeSuccess[0] = transferFuture.get(); // Wait for completion
+                        } catch (Exception e) {
+                            plugin.getLogger().severe("Error waiting for trade transfer: " + e.getMessage());
+                        }
                     }
                 }
 

@@ -3,6 +3,7 @@ package com.tatayless.sovereignty.database;
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.migration.InitialSchemaMigration;
 import com.tatayless.sovereignty.database.migration.MigrationManager;
+import com.tatayless.sovereignty.database.migration.VaultNpcsMigration;
 import org.jooq.DSLContext;
 
 import java.sql.Connection;
@@ -28,6 +29,9 @@ public class TableManager {
         private void registerMigrations() {
                 // Register the initial schema migration
                 migrationManager.registerMigration(new InitialSchemaMigration(isMySQL));
+
+                // Register the vault npcs migration
+                migrationManager.registerMigration(new VaultNpcsMigration(isMySQL));
 
                 // Add future migrations here in order of version number
                 // Example: migrationManager.registerMigration(new SomeFutureMigration());

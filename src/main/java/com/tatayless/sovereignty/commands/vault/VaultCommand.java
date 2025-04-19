@@ -46,12 +46,13 @@ public class VaultCommand implements CommandExecutor, TabCompleter {
                     page = 0;
             } catch (NumberFormatException e) {
                 // Ignore invalid number, use default page 0
+                page = 0;
             }
         }
 
-        // Open vault
+        // Open vault at specified page
         player.sendMessage(plugin.getLocalizationManager().getComponent("vault.opened"));
-        plugin.getServiceManager().getVaultService().openVault(player, sovereigntyPlayer.getNationId());
+        plugin.getServiceManager().getVaultService().openVaultPage(player, sovereigntyPlayer.getNationId(), page);
         return true;
     }
 

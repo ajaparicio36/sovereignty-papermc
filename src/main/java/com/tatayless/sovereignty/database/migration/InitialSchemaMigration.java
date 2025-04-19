@@ -163,6 +163,11 @@ public class InitialSchemaMigration implements Migration {
                 "nation_vault_id VARCHAR(36) NOT NULL UNIQUE, " +
                 "coordinates VARCHAR(255) NOT NULL, " + // Store as "x,y,z,world"
                 "entity_id INT, " + // Entity ID of the Villager NPC
+                "world TEXT, " + // Added for direct location storage
+                "x DOUBLE, " + // Added for direct x coordinate
+                "y DOUBLE, " + // Added for direct y coordinate
+                "z DOUBLE, " + // Added for direct z coordinate
+                "created_by VARCHAR(36), " + // Added creator's player ID
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE, " +
@@ -275,6 +280,11 @@ public class InitialSchemaMigration implements Migration {
                 "nation_vault_id TEXT NOT NULL UNIQUE, " +
                 "coordinates TEXT NOT NULL, " + // Store as "x,y,z,world"
                 "entity_id INTEGER, " + // Entity ID of the Villager NPC
+                "world TEXT, " + // Added for direct location storage
+                "x DOUBLE, " + // Added for direct x coordinate
+                "y DOUBLE, " + // Added for direct y coordinate
+                "z DOUBLE, " + // Added for direct z coordinate
+                "created_by TEXT, " + // Added creator's player ID
                 "created_at TEXT DEFAULT (datetime('now')), " +
                 "updated_at TEXT DEFAULT (datetime('now')), " +
                 "FOREIGN KEY (nation_id) REFERENCES nations(id) ON DELETE CASCADE, " +
