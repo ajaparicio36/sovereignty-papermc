@@ -180,6 +180,10 @@ public class InitialSchemaMigration implements Migration {
                 "nation_id VARCHAR(36) NOT NULL, " +
                 "coordinates VARCHAR(255) NOT NULL, " + // Store as "x,y,z,world"
                 "entity_id INT, " + // Entity ID of the Villager NPC
+                "world VARCHAR(255), " + // Added world column
+                "x DOUBLE NOT NULL DEFAULT 0, " + // Added x coordinate
+                "y DOUBLE NOT NULL DEFAULT 0, " + // Added y coordinate
+                "z DOUBLE NOT NULL DEFAULT 0, " + // Added z coordinate
                 "is_for_sender BOOLEAN NOT NULL DEFAULT TRUE, " +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
@@ -297,6 +301,10 @@ public class InitialSchemaMigration implements Migration {
                 "nation_id TEXT NOT NULL, " +
                 "coordinates TEXT NOT NULL, " + // Store as "x,y,z,world"
                 "entity_id INTEGER, " + // Entity ID of the Villager NPC
+                "world TEXT, " + // Added world column
+                "x DOUBLE NOT NULL DEFAULT 0, " + // Added x coordinate
+                "y DOUBLE NOT NULL DEFAULT 0, " + // Added y coordinate
+                "z DOUBLE NOT NULL DEFAULT 0, " + // Added z coordinate
                 "is_for_sender INTEGER NOT NULL DEFAULT 1, " + // Boolean as INTEGER in SQLite (1 = true)
                 "created_at TEXT DEFAULT (datetime('now')), " +
                 "updated_at TEXT DEFAULT (datetime('now')), " +

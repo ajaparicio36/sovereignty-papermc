@@ -3,6 +3,8 @@ package com.tatayless.sovereignty.database;
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.migration.InitialSchemaMigration;
 import com.tatayless.sovereignty.database.migration.MigrationManager;
+import com.tatayless.sovereignty.database.migration.NationVaultsMigration;
+import com.tatayless.sovereignty.database.migration.TradeVaultNpcsMigration;
 import com.tatayless.sovereignty.database.migration.VaultNpcsMigration;
 import org.jooq.DSLContext;
 
@@ -33,6 +35,12 @@ public class TableManager {
 
                 // Register the vault npcs migration
                 migrationManager.registerMigration(new VaultNpcsMigration(isMySQL));
+
+                // Register the nation vaults migration
+                migrationManager.registerMigration(new NationVaultsMigration(isMySQL));
+
+                // Register the trade vault npcs migration
+                migrationManager.registerMigration(new TradeVaultNpcsMigration(isMySQL));
 
                 // Add future migrations here in order of version number
                 // Example: migrationManager.registerMigration(new SomeFutureMigration());

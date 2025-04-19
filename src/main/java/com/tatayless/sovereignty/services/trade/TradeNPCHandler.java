@@ -173,8 +173,15 @@ public class TradeNPCHandler {
                     // Store the NPC in database
                     int entityId = npc[0].getEntityId();
                     String npcId = UUID.randomUUID().toString();
-                    String locationStr = String.format("%f,%f,%f,%s",
-                            location.getX(), location.getY(), location.getZ(), location.getWorld().getName());
+
+                    // Use the location components directly, similar to VaultNPCManager
+                    String worldName = location.getWorld().getName();
+                    double x = location.getX();
+                    double y = location.getY();
+                    double z = location.getZ();
+
+                    // Still store the consolidated location string for backwards compatibility
+                    String locationStr = String.format("%f,%f,%f,%s", x, y, z, worldName);
 
                     context.insertInto(
                             DSL.table("trade_vault_npcs"),
@@ -183,6 +190,10 @@ public class TradeNPCHandler {
                             DSL.field("nation_id"),
                             DSL.field("coordinates"),
                             DSL.field("entity_id"),
+                            DSL.field("world"),
+                            DSL.field("x"),
+                            DSL.field("y"),
+                            DSL.field("z"),
                             DSL.field("is_for_sender"))
                             .values(
                                     npcId,
@@ -190,6 +201,10 @@ public class TradeNPCHandler {
                                     nationId,
                                     locationStr,
                                     entityId,
+                                    worldName,
+                                    x,
+                                    y,
+                                    z,
                                     isSender ? 1 : 0)
                             .execute();
 

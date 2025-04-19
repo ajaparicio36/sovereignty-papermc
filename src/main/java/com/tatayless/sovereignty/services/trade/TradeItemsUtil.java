@@ -2,15 +2,23 @@ package com.tatayless.sovereignty.services.trade;
 
 import com.tatayless.sovereignty.Sovereignty;
 import com.tatayless.sovereignty.database.DatabaseOperation;
+import com.tatayless.sovereignty.models.Nation;
 import com.tatayless.sovereignty.models.Trade;
 import com.tatayless.sovereignty.services.TradeService;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -131,5 +139,69 @@ public class TradeItemsUtil {
 
         player.sendMessage(plugin.getLocalizationManager().getComponent("trade.created"));
         player.closeInventory();
+    }
+
+    /**
+     * Creates an ItemStack representing a trade for display in menus
+     *
+     * @param tradeService The trade service instance
+     * @param trade        The trade to create an item for
+     * @return An ItemStack representing the trade
+     */
+    public static ItemStack createTradeItem(TradeService tradeService, Trade trade) {
+        Nation sendingNation = tradeService.getNationService().getNation(trade.getSendingNationId());
+        Nation receivingNation = tradeService.getNationService().getNation(trade.getReceivingNationId());
+        String senderName = sendingNation != null ? sendingNation.getName() : "Unknown";
+        String receiverName = receivingNation != null ? receivingNation.getName() : "Unknown";
+
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(net.kyori.adventure.text.Component.text(senderName + " → " + receiverName)
+                .color(net.kyori.adventure.text.format.NamedTextColor.GOLD));
+
+        List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+        net.kyori.adventure.text.format.TextColor statusColor;
+        switch (trade.getStatus()) {
+            case ACTIVE:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.GREEN;
+                break;
+            case PENDING:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.YELLOW;
+                break;
+            case CANCELLED:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.RED;
+                break;
+            case COMPLETED:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.AQUA;
+                break;
+            default:
+                statusColor = net.kyori.adventure.text.format.NamedTextColor.GRAY;
+        }
+
+        lore.add(net.kyori.adventure.text.Component.text("Status: " + trade.getStatus().toString())
+                .color(statusColor));
+        lore.add(net.kyori.adventure.text.Component.text("Consecutive: " + trade.getConsecutiveTrades())
+                .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
+
+        if (trade.getNextExecution() != null) {
+            // Format next execution time
+            String nextExec = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(trade.getNextExecution());
+            lore.add(net.kyori.adventure.text.Component.text("Next: " + nextExec)
+                    .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
+        }
+
+        // Add trade ID as hidden lore for identification
+        lore.add(net.kyori.adventure.text.Component.text("ID: " + trade.getId())
+                .color(net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY));
+
+        meta.lore(lore);
+
+        // Add PersistentDataContainer information for better identification
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        NamespacedKey tradeIdKey = new NamespacedKey(tradeService.getPlugin(), "trade_id");
+        container.set(tradeIdKey, PersistentDataType.STRING, trade.getId());
+
+        item.setItemMeta(meta);
+        return item;
     }
 }
