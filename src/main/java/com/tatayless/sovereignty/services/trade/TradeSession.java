@@ -6,44 +6,20 @@ package com.tatayless.sovereignty.services.trade;
  * trade system.
  */
 public class TradeSession {
-    private final String nationId;
-    private String tradeId;
     private TradeSessionType type;
-    private String otherNationId;
-    private int executionInterval = 24; // Default execution interval in hours
+    private String nationId;
+    private String partnerNationId;
+    private int interval;
+    private String tradeId;
 
-    /**
-     * Creates a new trade session with a nation ID and session type
-     *
-     * @param nationId The ID of the nation this session belongs to
-     * @param type     The type of session
-     */
-    public TradeSession(String nationId, TradeSessionType type) {
-        this.nationId = nationId;
+    public TradeSession(TradeSessionType type, String nationId, String partnerNationId, int interval) {
         this.type = type;
-    }
-
-    /**
-     * Creates a new trade session with a nation ID and trade ID
-     *
-     * @param nationId The ID of the nation this session belongs to
-     * @param tradeId  The ID of the trade being accessed
-     * @param type     The type of session
-     */
-    public TradeSession(String nationId, String tradeId, TradeSessionType type) {
         this.nationId = nationId;
-        this.tradeId = tradeId;
-        this.type = type;
+        this.partnerNationId = partnerNationId;
+        this.interval = interval;
     }
 
-    public String getNationId() {
-        return nationId;
-    }
-
-    public String getTradeId() {
-        return tradeId;
-    }
-
+    // Used for sessions where we're working with an existing trade
     public void setTradeId(String tradeId) {
         this.tradeId = tradeId;
     }
@@ -52,23 +28,19 @@ public class TradeSession {
         return type;
     }
 
-    public void setType(TradeSessionType type) {
-        this.type = type;
+    public String getNationId() {
+        return nationId;
     }
 
-    public String getOtherNationId() {
-        return otherNationId;
+    public String getPartnerNationId() {
+        return partnerNationId;
     }
 
-    public void setOtherNationId(String otherNationId) {
-        this.otherNationId = otherNationId;
+    public int getInterval() {
+        return interval;
     }
 
-    public int getExecutionInterval() {
-        return executionInterval;
-    }
-
-    public void setExecutionInterval(int executionInterval) {
-        this.executionInterval = executionInterval;
+    public String getTradeId() {
+        return tradeId;
     }
 }

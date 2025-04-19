@@ -80,7 +80,8 @@ public class TradeVaultHandler {
         TradeSessionType sessionType = isSender ? TradeSessionType.SENDING_VAULT : TradeSessionType.RECEIVING_VAULT;
 
         tradeService.getPlayerSessions().put(player.getUniqueId(),
-                new TradeSession(nationId, tradeId, sessionType));
+                new TradeSession(sessionType, nationId,
+                        trade.isSender(nationId) ? trade.getReceivingNationId() : trade.getSendingNationId(), 0));
 
         // Register player as viewing this trade vault for real-time updates
         plugin.getVaultUpdateManager().registerTradeVaultViewer(tradeId, isSender, player.getUniqueId());
