@@ -32,7 +32,7 @@ public class AdminService {
             return CompletableFuture.completedFuture(false);
         }
 
-        nation.setPower(power);
+        nation.setPowerByAdmin(power);
         return nationService.saveNation(nation);
     }
 
@@ -49,7 +49,7 @@ public class AdminService {
             return CompletableFuture.completedFuture(false);
         }
 
-        nation.setPower(power);
+        nation.setPowerByAdmin(power);
         return nationService.saveNation(nation);
     }
 }

@@ -7,6 +7,7 @@ public class Nation {
     private String name;
     private double power;
     private int powerLevel;
+    private boolean adminSetPower;
     private Set<ChunkLocation> claimedChunks;
     private Set<ChunkLocation> annexedChunks;
     private Set<String> alliances;
@@ -23,6 +24,7 @@ public class Nation {
         this.name = name;
         this.power = 1.0;
         this.powerLevel = 1;
+        this.adminSetPower = false;
         this.claimedChunks = new HashSet<>();
         this.annexedChunks = new HashSet<>();
         this.alliances = new HashSet<>();
@@ -54,6 +56,20 @@ public class Nation {
     public void setPower(double power) {
         this.power = power;
         updatePowerLevel();
+    }
+
+    public void setPowerByAdmin(double power) {
+        this.power = power;
+        this.adminSetPower = true;
+        updatePowerLevel();
+    }
+
+    public boolean isAdminSetPower() {
+        return adminSetPower;
+    }
+
+    public void setAdminSetPower(boolean adminSetPower) {
+        this.adminSetPower = adminSetPower;
     }
 
     public void addPower(double amount) {

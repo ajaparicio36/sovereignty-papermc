@@ -51,6 +51,7 @@ public class TableManager {
                                 "id VARCHAR(36) PRIMARY KEY, " +
                                 "name VARCHAR(64) NOT NULL UNIQUE, " +
                                 "power DOUBLE NOT NULL DEFAULT 1.0, " +
+                                "admin_set_power BOOLEAN NOT NULL DEFAULT FALSE, " + // Track if power was set by admin
                                 "power_level INT NOT NULL DEFAULT 1, " +
                                 "claimed_chunks JSON, " +
                                 "annexed_chunks JSON, " + // Chunks annexed from other nations
@@ -166,6 +167,7 @@ public class TableManager {
                                 "id TEXT PRIMARY KEY, " +
                                 "name TEXT NOT NULL UNIQUE, " +
                                 "power REAL NOT NULL DEFAULT 1.0, " +
+                                "admin_set_power BOOLEAN NOT NULL DEFAULT FALSE, " +
                                 "power_level INTEGER NOT NULL DEFAULT 1, " +
                                 "claimed_chunks TEXT, " + // JSON array stored as TEXT in SQLite
                                 "annexed_chunks TEXT, " + // Chunks annexed from other nations
