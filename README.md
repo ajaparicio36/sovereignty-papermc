@@ -25,28 +25,28 @@ Sovereignty is a comprehensive nation management plugin for Minecraft servers th
 
 ### Nation Commands
 
-| Command                                    | Description                                      | Permission                                |
-| ------------------------------------------ | ------------------------------------------------ | ----------------------------------------- | --------------- |
-| `/nation create <name>`                    | Create a new nation                              | Default                                   |
-| `/nation disband [confirm]`                | Disband your nation                              | Nation president                          |
-| `/nation info [nation]`                    | View information about a nation                  | Default                                   |
-| `/nation claim [toggle]`                   | Claim the current chunk or toggle auto-claiming  | Nation officers                           |
-| `/nation unclaim [toggle]`                 | Unclaim the current chunk or toggle auto-unclaim | Nation officers                           |
-| `/nation invite <player>`                  | Invite a player to your nation                   | Nation officers                           |
-| `/nation join <nation>`                    | Join a nation you've been invited to             | Default                                   |
-| `/nation leave`                            | Leave your current nation                        | Default                                   |
-| `/nation appoint <player> <senator         | soldier>`                                        | Appoint a player to a role in your nation | Nation officers |
-| `/nation alliance list`                    | View current alliances and pending requests      | Default                                   |
-| `/nation alliance propose <nation>`        | Propose an alliance to another nation            | Nation officers                           |
-| `/nation alliance accept <nation>`         | Accept an alliance proposal                      | Nation officers                           |
-| `/nation alliance deny <nation>`           | Deny an alliance proposal                        | Nation officers                           |
-| `/nation alliance break <nation>`          | Break an existing alliance                       | Nation officers                           |
-| `/nation vaultnpc [remove]`                | Create, move or remove a Vault NPC               | Nation officers                           |
-| `/nation trade create <nation> [interval]` | Create a trade agreement with another nation     | Nation officers                           |
-| `/nation trade list`                       | View your nation's trade agreements              | Nation officers                           |
-| `/nation trade delete`                     | Delete a trade agreement                         | Nation officers                           |
-| `/nation trade npc create`                 | Create a trade NPC                               | Nation officers                           |
-| `/nation trade npc delete`                 | Delete a trade NPC                               | Nation officers                           |
+| Command                                       | Description                                      | Permission       |
+| --------------------------------------------- | ------------------------------------------------ | ---------------- |
+| `/nation create <name>`                       | Create a new nation                              | Default          |
+| `/nation disband [confirm]`                   | Disband your nation                              | Nation president |
+| `/nation info [nation]`                       | View information about a nation                  | Default          |
+| `/nation claim [toggle]`                      | Claim the current chunk or toggle auto-claiming  | Nation officers  |
+| `/nation unclaim [toggle]`                    | Unclaim the current chunk or toggle auto-unclaim | Nation officers  |
+| `/nation invite <player>`                     | Invite a player to your nation                   | Nation officers  |
+| `/nation join <nation>`                       | Join a nation you've been invited to             | Default          |
+| `/nation leave`                               | Leave your current nation                        | Default          |
+| `/nation appoint <player> <senator\|soldier>` | Appoint a player to a role in your nation        | Nation officers  |
+| `/nation alliance list`                       | View current alliances and pending requests      | Default          |
+| `/nation alliance propose <nation>`           | Propose an alliance to another nation            | Nation officers  |
+| `/nation alliance accept <nation>`            | Accept an alliance proposal                      | Nation officers  |
+| `/nation alliance deny <nation>`              | Deny an alliance proposal                        | Nation officers  |
+| `/nation alliance break <nation>`             | Break an existing alliance                       | Nation officers  |
+| `/nation vaultnpc [remove]`                   | Create, move or remove a Vault NPC               | Nation officers  |
+| `/nation trade create <nation> [interval]`    | Create a trade agreement with another nation     | Nation officers  |
+| `/nation trade list`                          | View your nation's trade agreements              | Nation officers  |
+| `/nation trade delete`                        | Delete a trade agreement                         | Nation officers  |
+| `/nation trade npc create`                    | Create a trade NPC                               | Nation officers  |
+| `/nation trade npc delete`                    | Delete a trade NPC                               | Nation officers  |
 
 ### War Commands
 
