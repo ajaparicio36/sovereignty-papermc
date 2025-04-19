@@ -32,6 +32,18 @@ public class DatabaseManager {
         setupDataSource();
         tableManager = new TableManager(plugin, configManager.isMySQL());
         createTablesIfNotExist();
+
+        // Make sure migrations are applied during initialization
+        try (Connection conn = getConnection()) {
+            DSLContext context = createContextSafe(conn);
+            boolean migrationsApplied = tableManager.getMigrationManager().applyMigrations(conn, context);
+            if (!migrationsApplied) {
+                throw new SQLException("Failed to apply database migrations");
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to apply migrations: " + e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -129,13 +141,16 @@ public class DatabaseManager {
             plugin.getLogger().info("Got connection, creating context...");
             DSLContext context = DSL.using(conn, sqlDialect);
             plugin.getLogger().info("Calling tableManager.createTables...");
-            // Don't use join() here as it blocks the current thread
-            tableManager.createTables(context).exceptionally(ex -> {
+
+            // Change to synchronous table creation to ensure tables exist before continuing
+            try {
+                tableManager.createTablesSync(conn, context);
+                plugin.getLogger().info("Tables created successfully");
+            } catch (Exception ex) {
                 plugin.getLogger().severe("Error in table creation: " + ex.getMessage());
                 ex.printStackTrace();
-                return null;
-            });
-            plugin.getLogger().info("Table creation has been scheduled asynchronously");
+                throw ex;
+            }
         } catch (Exception e) {
             plugin.getLogger().severe("Error setting up tables: " + e.getMessage());
             e.printStackTrace();

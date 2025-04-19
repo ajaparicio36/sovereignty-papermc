@@ -24,73 +24,137 @@ public class VaultNpcsMigration implements Migration {
 
     @Override
     public String getDescription() {
-        return "Add location columns to vault_npcs table";
+        return "Add location columns to vault_npcs table and create nation_vaults table";
     }
 
     @Override
     public boolean apply(Connection connection, DSLContext context) throws SQLException {
         try {
-            // First check if table exists
+            boolean success = true;
+
+            // First check if vault_npcs table exists
             if (!tableExists(connection, "vault_npcs")) {
-                // Table doesn't exist yet, it will be created with all columns in
-                // InitialSchemaMigration
-                return true;
-            }
+                // Create the table since it doesn't exist
+                System.out.println("Creating vault_npcs table from migration");
 
-            // Get existing column names to avoid adding duplicates
-            Set<String> existingColumns = getExistingColumns(connection, "vault_npcs");
+                String createTableSQL;
+                if (isMySQL) {
+                    createTableSQL = "CREATE TABLE vault_npcs ("
+                            + "id INTEGER PRIMARY KEY AUTO_INCREMENT, "
+                            + "uuid TEXT NOT NULL, "
+                            + "name TEXT NOT NULL, "
+                            + "world TEXT NOT NULL, "
+                            + "x DOUBLE NOT NULL, "
+                            + "y DOUBLE NOT NULL, "
+                            + "z DOUBLE NOT NULL, "
+                            + "created_by TEXT, "
+                            + "nation_id INTEGER NOT NULL)";
+                } else {
+                    createTableSQL = "CREATE TABLE vault_npcs ("
+                            + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                            + "uuid TEXT NOT NULL, "
+                            + "name TEXT NOT NULL, "
+                            + "world TEXT NOT NULL, "
+                            + "x DOUBLE NOT NULL, "
+                            + "y DOUBLE NOT NULL, "
+                            + "z DOUBLE NOT NULL, "
+                            + "created_by TEXT, "
+                            + "nation_id INTEGER NOT NULL)";
+                }
 
-            // Add each column if it doesn't already exist
-            if (!existingColumns.contains("world")) {
                 try {
-                    context.execute("ALTER TABLE vault_npcs ADD COLUMN world TEXT");
+                    context.execute(createTableSQL);
                 } catch (Exception e) {
-                    // Column might already exist or other issue - log but continue
-                    System.err.println("Error adding 'world' column: " + e.getMessage());
+                    System.err.println("Error creating vault_npcs table: " + e.getMessage());
+                    e.printStackTrace();
+                    success = false;
+                }
+            } else {
+                // Get existing column names to avoid adding duplicates
+                Set<String> existingColumns = getExistingColumns(connection, "vault_npcs");
+
+                // Add each column if it doesn't already exist
+                if (!existingColumns.contains("world")) {
+                    try {
+                        context.execute("ALTER TABLE vault_npcs ADD COLUMN world TEXT");
+                    } catch (Exception e) {
+                        // Column might already exist or other issue - log but continue
+                        System.err.println("Error adding 'world' column: " + e.getMessage());
+                    }
+                }
+
+                if (!existingColumns.contains("x")) {
+                    try {
+                        context.execute("ALTER TABLE vault_npcs ADD COLUMN x DOUBLE");
+                    } catch (Exception e) {
+                        System.err.println("Error adding 'x' column: " + e.getMessage());
+                    }
+                }
+
+                if (!existingColumns.contains("y")) {
+                    try {
+                        context.execute("ALTER TABLE vault_npcs ADD COLUMN y DOUBLE");
+                    } catch (Exception e) {
+                        System.err.println("Error adding 'y' column: " + e.getMessage());
+                    }
+                }
+
+                if (!existingColumns.contains("z")) {
+                    try {
+                        context.execute("ALTER TABLE vault_npcs ADD COLUMN z DOUBLE");
+                    } catch (Exception e) {
+                        System.err.println("Error adding 'z' column: " + e.getMessage());
+                    }
+                }
+
+                if (!existingColumns.contains("created_by")) {
+                    try {
+                        context.execute("ALTER TABLE vault_npcs ADD COLUMN created_by TEXT");
+                    } catch (Exception e) {
+                        System.err.println("Error adding 'created_by' column: " + e.getMessage());
+                    }
+                }
+
+                if (!existingColumns.contains("nation_id")) {
+                    try {
+                        context.execute("ALTER TABLE vault_npcs ADD COLUMN nation_id INTEGER NOT NULL");
+                    } catch (Exception e) {
+                        System.err.println("Error adding 'nation_id' column: " + e.getMessage());
+                    }
                 }
             }
 
-            if (!existingColumns.contains("x")) {
+            // Now check for nation_vaults table
+            if (!tableExists(connection, "nation_vaults")) {
+                System.out.println("Creating nation_vaults table from migration");
+
+                String createVaultsTable;
+                if (isMySQL) {
+                    createVaultsTable = "CREATE TABLE nation_vaults ("
+                            + "id TEXT PRIMARY KEY, "
+                            + "nation_id TEXT NOT NULL, "
+                            + "items TEXT, "
+                            + "overflow_items TEXT, "
+                            + "overflow_expiry TIMESTAMP)";
+                } else {
+                    createVaultsTable = "CREATE TABLE nation_vaults ("
+                            + "id TEXT PRIMARY KEY, "
+                            + "nation_id TEXT NOT NULL, "
+                            + "items TEXT, "
+                            + "overflow_items TEXT, "
+                            + "overflow_expiry TIMESTAMP)";
+                }
+
                 try {
-                    context.execute("ALTER TABLE vault_npcs ADD COLUMN x DOUBLE");
+                    context.execute(createVaultsTable);
                 } catch (Exception e) {
-                    System.err.println("Error adding 'x' column: " + e.getMessage());
+                    System.err.println("Error creating nation_vaults table: " + e.getMessage());
+                    e.printStackTrace();
+                    success = false;
                 }
             }
 
-            if (!existingColumns.contains("y")) {
-                try {
-                    context.execute("ALTER TABLE vault_npcs ADD COLUMN y DOUBLE");
-                } catch (Exception e) {
-                    System.err.println("Error adding 'y' column: " + e.getMessage());
-                }
-            }
-
-            if (!existingColumns.contains("z")) {
-                try {
-                    context.execute("ALTER TABLE vault_npcs ADD COLUMN z DOUBLE");
-                } catch (Exception e) {
-                    System.err.println("Error adding 'z' column: " + e.getMessage());
-                }
-            }
-
-            if (!existingColumns.contains("created_by")) {
-                try {
-                    context.execute("ALTER TABLE vault_npcs ADD COLUMN created_by TEXT");
-                } catch (Exception e) {
-                    System.err.println("Error adding 'created_by' column: " + e.getMessage());
-                }
-            }
-
-            if (!existingColumns.contains("nation_id")) {
-                try {
-                    context.execute("ALTER TABLE vault_npcs ADD COLUMN nation_id INTEGER NOT NULL");
-                } catch (Exception e) {
-                    System.err.println("Error adding 'nation_id' column: " + e.getMessage());
-                }
-            }
-
-            return true;
+            return success;
         } catch (Exception e) {
             e.printStackTrace();
             return false;

@@ -7,6 +7,7 @@ import com.tatayless.sovereignty.database.migration.VaultNpcsMigration;
 import org.jooq.DSLContext;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 
 public class TableManager {
@@ -76,5 +77,43 @@ public class TableManager {
                 });
 
                 return future;
+        }
+
+        /**
+         * Creates tables synchronously
+         * 
+         * @param conn    Database connection
+         * @param context DSL context
+         * @throws SQLException if table creation fails
+         */
+        public void createTablesSync(Connection conn, DSLContext context) throws SQLException {
+                // Apply migrations synchronously - this will create all required tables
+                if (!migrationManager.applyMigrations(conn, context)) {
+                        throw new SQLException("Failed to apply database migrations during table creation");
+                }
+
+                // Verify that critical tables exist
+                if (!tableExists(conn, "vault_npcs")) {
+                        plugin.getLogger().severe("Critical table 'vault_npcs' wasn't created by migrations!");
+                        throw new SQLException("Failed to create vault_npcs table");
+                }
+        }
+
+        // Add a helper method to check if a table exists
+        private boolean tableExists(Connection connection, String tableName) throws SQLException {
+                java.sql.DatabaseMetaData meta = connection.getMetaData();
+                try (java.sql.ResultSet rs = meta.getTables(null, null, tableName, new String[] { "TABLE" })) {
+                        if (isMySQL) {
+                                return rs.next();
+                        } else {
+                                // SQLite table names are case-insensitive
+                                while (rs.next()) {
+                                        if (rs.getString("TABLE_NAME").equalsIgnoreCase(tableName)) {
+                                                return true;
+                                        }
+                                }
+                                return false;
+                        }
+                }
         }
 }

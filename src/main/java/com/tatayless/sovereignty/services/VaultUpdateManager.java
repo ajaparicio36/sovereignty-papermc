@@ -4,12 +4,14 @@ import com.tatayless.sovereignty.Sovereignty;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 /**
  * Manages real-time updates between players viewing the same vault
@@ -97,27 +99,51 @@ public class VaultUpdateManager {
     public void updateNationVaultViewers(String vaultId, int page, UUID updaterUuid, Inventory updatedInventory) {
         String compoundKey = vaultId + ":" + page;
         Set<UUID> viewers = nationVaultViewers.get(compoundKey);
-        if (viewers == null)
+        if (viewers == null) {
+            plugin.getLogger().info("[DEBUG] No additional viewers found for vault " + vaultId + " page " + page);
             return;
+        }
+
+        // Create a safe copy of viewers to prevent concurrent modification
+        Set<UUID> viewersCopy = new HashSet<>(viewers);
+        plugin.getLogger().info(
+                "[DEBUG] Found " + viewersCopy.size() + " additional viewers for vault " + vaultId + " page " + page);
 
         // Run on the main thread since inventory operations are not thread-safe
         Bukkit.getScheduler().runTask(plugin, () -> {
-            for (UUID viewerUuid : viewers) {
-                // Don't update the inventory of the player who made the change
-                if (viewerUuid.equals(updaterUuid))
-                    continue;
+            try {
+                for (UUID viewerUuid : viewersCopy) {
+                    // Don't update the inventory of the player who made the change
+                    if (viewerUuid.equals(updaterUuid)) {
+                        plugin.getLogger().info("[DEBUG] Skipping updater's inventory: " + viewerUuid);
+                        continue;
+                    }
 
-                Player viewer = Bukkit.getPlayer(viewerUuid);
-                if (viewer != null
-                        && viewer.getOpenInventory().getTopInventory().getSize() == updatedInventory.getSize()) {
-                    // Check if the player is still viewing the expected inventory
-                    String title = viewer.getOpenInventory().title().toString();
-                    if (title.startsWith("Nation Vault:") && title.contains("Page " + (page + 1))) {
-                        // Update inventory contents, preserving navigation buttons
-                        updateInventoryContentsPreservingButtons(viewer.getOpenInventory().getTopInventory(),
-                                updatedInventory, VaultService.NEXT_PAGE_SLOT, VaultService.PREV_PAGE_SLOT);
+                    Player viewer = Bukkit.getPlayer(viewerUuid);
+                    if (viewer != null && viewer.isOnline() &&
+                            viewer.getOpenInventory() != null &&
+                            viewer.getOpenInventory().getTopInventory() != null &&
+                            viewer.getOpenInventory().getTopInventory().getSize() == updatedInventory.getSize()) {
+
+                        // Check if the player is still viewing the expected inventory
+                        String title = viewer.getOpenInventory().title().toString();
+                        if (title.startsWith("Nation Vault:") && title.contains("Page " + (page + 1))) {
+                            // Update inventory contents, preserving navigation buttons
+                            plugin.getLogger().info("[DEBUG] Updating inventory for viewer " + viewer.getName() +
+                                    " for vault " + vaultId + " page " + page);
+                            updateInventoryContentsPreservingButtons(viewer.getOpenInventory().getTopInventory(),
+                                    updatedInventory, VaultService.NEXT_PAGE_SLOT, VaultService.PREV_PAGE_SLOT);
+                        } else {
+                            plugin.getLogger().info("[DEBUG] Viewer " + viewer.getName() +
+                                    " no longer viewing the right page. Current title: " + title);
+                        }
+                    } else {
+                        plugin.getLogger().info("[DEBUG] Viewer " + viewerUuid + " no longer valid for updates");
                     }
                 }
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "[DEBUG] Error updating nation vault viewers: " + e.getMessage(),
+                        e);
             }
         });
     }
@@ -168,18 +194,57 @@ public class VaultUpdateManager {
      */
     private void updateInventoryContentsPreservingButtons(Inventory targetInventory, Inventory sourceInventory,
             int... preserveSlots) {
-        for (int i = 0; i < targetInventory.getSize() && i < sourceInventory.getSize(); i++) {
-            boolean isPreservedSlot = false;
-            for (int slot : preserveSlots) {
-                if (i == slot) {
-                    isPreservedSlot = true;
-                    break;
+        try {
+            int updatedItems = 0;
+            int preservedButtons = 0;
+            int size = Math.min(targetInventory.getSize(), sourceInventory.getSize()); // Use the smaller size
+
+            plugin.getLogger()
+                    .info("[DEBUG] Updating viewer inventory (" + targetInventory.getType() + " size "
+                            + targetInventory.getSize() + ") from source (" + sourceInventory.getType() + " size "
+                            + sourceInventory.getSize() + ")");
+
+            for (int i = 0; i < size; i++) {
+                boolean isPreservedSlot = false;
+                for (int slot : preserveSlots) {
+                    if (i == slot) {
+                        isPreservedSlot = true;
+                        break;
+                    }
+                }
+
+                if (isPreservedSlot) {
+                    // Optionally verify the item in the target slot *is* a button before preserving
+                    // This prevents preserving non-button items if the slot index is wrong
+                    ItemStack targetItem = targetInventory.getItem(i);
+                    // We assume the target already has the correct button, so we don't touch it.
+                    // If we wanted to ensure the *correct* button is there, we'd need access to
+                    // VaultService.createNavigationItem
+                    if (targetItem != null) { // Check if something is actually there to preserve
+                        preservedButtons++;
+                        plugin.getLogger().log(Level.INFO,
+                                "[DEBUG] Preserving item in slot " + i + ": " + targetItem.getType());
+                    } else {
+                        plugin.getLogger().log(Level.INFO,
+                                "[DEBUG] Slot " + i + " marked for preservation, but is empty in target inventory.");
+                        // If the source has the button, maybe place it? Requires VaultService access.
+                        // For now, just leave it empty if it was empty.
+                    }
+                } else {
+                    // Update non-preserved slots
+                    ItemStack sourceItem = sourceInventory.getItem(i);
+                    targetInventory.setItem(i, sourceItem != null ? sourceItem.clone() : null); // Clone for safety
+                    if (sourceItem != null) {
+                        updatedItems++;
+                    }
                 }
             }
 
-            if (!isPreservedSlot) {
-                targetInventory.setItem(i, sourceInventory.getItem(i));
-            }
+            plugin.getLogger().info("[DEBUG] Viewer inventory update complete: " + updatedItems +
+                    " items updated, " + preservedButtons + " slots preserved.");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "[DEBUG] Error updating viewer inventory contents: " + e.getMessage(),
+                    e);
         }
     }
 

@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class VaultStorageManager {
     private final Sovereignty plugin;
@@ -30,37 +31,143 @@ public class VaultStorageManager {
      * Saves a vault to the database
      */
     public CompletableFuture<Boolean> saveVault(VaultService.NationVault vault) {
+        // Capture state immediately for logging, before async execution
+        final String vaultId = vault.getId();
+        final String nationId = vault.getNationId();
+        plugin.getLogger().info("[DEBUG] Received request to save vault " + vaultId + " for nation " + nationId);
+
         return CompletableFuture.supplyAsync(() -> {
+            // Log inside the async task
+            plugin.getLogger().info(
+                    "[DEBUG] Starting async save task for vault " + vaultId + " (Nation: " + nationId + ")");
             return plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Boolean>() {
                 @Override
                 public Boolean execute(Connection conn, DSLContext context) throws SQLException {
-                    Map<String, List<Map<String, Object>>> pagesMap = new HashMap<>();
-                    for (Map.Entry<Integer, ItemStack[]> entry : vault.getPages().entrySet()) {
-                        if (entry.getValue() != null) {
-                            pagesMap.put(String.valueOf(entry.getKey()), serializeItems(entry.getValue()));
+                    try {
+                        plugin.getLogger().info("[DEBUG] Serializing vault data for vault " + vaultId);
+                        Map<String, List<Map<String, Object>>> pagesMap = new HashMap<>();
+                        int totalItemsAcrossPages = 0;
+                        int pageCount = 0;
+
+                        // Use getter and add null check
+                        Map<Integer, ItemStack[]> vaultPages = vault.getPages();
+                        if (vaultPages == null) {
+                            plugin.getLogger()
+                                    .severe("[ERROR] Vault " + vaultId
+                                            + " has null pages map during save! This should not happen.");
+                            vaultPages = new HashMap<>();
                         }
+
+                        for (Map.Entry<Integer, ItemStack[]> entry : vaultPages.entrySet()) {
+                            Integer pageIndex = entry.getKey();
+                            ItemStack[] items = entry.getValue();
+
+                            if (items != null) {
+                                List<Map<String, Object>> serializedItems = serializeItems(items);
+                                int pageItemCount = (int) Arrays.stream(items).filter(Objects::nonNull).count();
+                                totalItemsAcrossPages += pageItemCount;
+                                pageCount++;
+
+                                if (serializedItems != null && !serializedItems.isEmpty()) {
+                                    pagesMap.put(String.valueOf(pageIndex), serializedItems);
+                                    plugin.getLogger().info("[DEBUG] Serialized " + pageItemCount +
+                                            " items (found in original array) for vault " + vaultId + " page "
+                                            + pageIndex +
+                                            ". Serialized list size: " + serializedItems.size());
+                                } else if (pageItemCount > 0) {
+                                    plugin.getLogger()
+                                            .warning("[DEBUG] Page " + pageIndex + " for vault " + vaultId +
+                                                    " had " + pageItemCount
+                                                    + " items but resulted in empty/null serialized list.");
+                                }
+                            } else {
+                                plugin.getLogger().warning("[DEBUG] Page " + pageIndex + " for vault " + vaultId
+                                        + " has null ItemStack array.");
+                            }
+                        }
+
+                        String itemsJson = gson.toJson(pagesMap);
+                        String overflowItemsJson = null;
+                        int overflowItemCount = 0;
+
+                        if (vault.getOverflowItems() != null) {
+                            List<Map<String, Object>> serializedOverflow = serializeItems(vault.getOverflowItems());
+                            if (serializedOverflow != null) {
+                                overflowItemsJson = gson.toJson(serializedOverflow);
+                                overflowItemCount = (int) Arrays.stream(vault.getOverflowItems())
+                                        .filter(Objects::nonNull).count();
+                                plugin.getLogger().info("[DEBUG] Serialized " + overflowItemCount
+                                        + " overflow items for vault " + vaultId);
+                            }
+                        }
+
+                        plugin.getLogger().info("[DEBUG] Preparing DB operation for vault " + vaultId + ": " +
+                                totalItemsAcrossPages + " items across " + pageCount + " pages. " +
+                                overflowItemCount + " overflow items. " +
+                                "Pages JSON size: " + (itemsJson != null ? itemsJson.length() : 0) + " chars. " +
+                                "Overflow JSON size: " + (overflowItemsJson != null ? overflowItemsJson.length() : 0)
+                                + " chars.");
+                        if (plugin.getLogger().isLoggable(Level.FINE)) {
+                            plugin.getLogger().fine("[DEBUG] Vault " + vaultId + " Pages JSON to save: " + itemsJson);
+                            plugin.getLogger()
+                                    .fine("[DEBUG] Vault " + vaultId + " Overflow JSON to save: " + overflowItemsJson);
+                        }
+
+                        Record existingRecord = context.select(DSL.field("id"))
+                                .from("nation_vaults")
+                                .where(DSL.field("id").eq(vaultId))
+                                .fetchOne();
+
+                        boolean success;
+                        Timestamp expiryTimestamp = vault.getOverflowExpiry() != null
+                                ? new Timestamp(vault.getOverflowExpiry().getTime())
+                                : null;
+
+                        if (existingRecord != null) {
+                            plugin.getLogger().info("[DEBUG] Updating existing vault record for " + vaultId);
+                            int updated = context.update(DSL.table("nation_vaults"))
+                                    .set(DSL.field("items"), itemsJson)
+                                    .set(DSL.field("overflow_items"), overflowItemsJson)
+                                    .set(DSL.field("overflow_expiry"), expiryTimestamp)
+                                    .where(DSL.field("id").eq(vaultId))
+                                    .execute();
+
+                            success = updated > 0;
+                            if (!success)
+                                plugin.getLogger()
+                                        .warning("[DEBUG] Vault update query affected 0 rows for ID: " + vaultId);
+
+                        } else {
+                            plugin.getLogger().info("[DEBUG] Creating new vault record for " + vaultId);
+                            int inserted = context.insertInto(DSL.table("nation_vaults"))
+                                    .set(DSL.field("id"), vaultId)
+                                    .set(DSL.field("nation_id"), nationId)
+                                    .set(DSL.field("items"), itemsJson)
+                                    .set(DSL.field("overflow_items"), overflowItemsJson)
+                                    .set(DSL.field("overflow_expiry"), expiryTimestamp)
+                                    .execute();
+
+                            success = inserted > 0;
+                            if (!success)
+                                plugin.getLogger()
+                                        .warning("[DEBUG] Vault insert query affected 0 rows for ID: " + vaultId);
+                        }
+
+                        plugin.getLogger().info("[DEBUG] Vault save database operation " +
+                                (success ? "successful" : "failed") + " for vault " + vaultId);
+                        return success;
+                    } catch (Exception e) {
+                        plugin.getLogger().log(Level.SEVERE,
+                                "[ERROR] Error during database operation for vault " + vaultId + ": " + e.getMessage(),
+                                e);
+                        return false;
                     }
-
-                    String itemsJson = gson.toJson(pagesMap);
-                    String overflowItemsJson = null;
-
-                    if (vault.getOverflowItems() != null) {
-                        overflowItemsJson = gson.toJson(serializeItems(vault.getOverflowItems()));
-                    }
-
-                    context.update(DSL.table("nation_vaults"))
-                            .set(DSL.field("items"), itemsJson)
-                            .set(DSL.field("overflow_items"), overflowItemsJson)
-                            .set(DSL.field("overflow_expiry"),
-                                    vault.getOverflowExpiry() != null
-                                            ? new Timestamp(vault.getOverflowExpiry().getTime())
-                                            : null)
-                            .where(DSL.field("id").eq(vault.getId()))
-                            .execute();
-
-                    return true;
                 }
             });
+        }).exceptionally(ex -> {
+            plugin.getLogger().log(Level.SEVERE,
+                    "[ERROR] Uncaught exception in async vault save task for vault " + vaultId, ex);
+            return false;
         });
     }
 
@@ -83,78 +190,106 @@ public class VaultStorageManager {
                             .fetchOne();
 
                     if (record != null) {
-                        String id = record.get("id", String.class);
-                        String itemsJson = record.get("items", String.class);
-                        String overflowItemsJson = record.get("overflow_items", String.class);
-                        Object overflowExpiryObj = record.get("overflow_expiry");
+                        try {
+                            String id = record.get("id", String.class);
+                            String itemsJson = record.get("items", String.class);
+                            String overflowItemsJson = record.get("overflow_items", String.class);
+                            Object overflowExpiryObj = record.get("overflow_expiry");
 
-                        Map<Integer, ItemStack[]> vaultPages = new HashMap<>();
-                        ItemStack[] overflowItems = null;
-                        Date overflowExpiry = null;
+                            Map<Integer, ItemStack[]> vaultPages = new HashMap<>();
+                            ItemStack[] overflowItems = null;
+                            Date overflowExpiry = null;
 
-                        if (itemsJson != null && !itemsJson.isEmpty()) {
-                            try {
-                                Map<String, List<Map<String, Object>>> pagesMap = gson.fromJson(itemsJson,
-                                        new TypeToken<Map<String, List<Map<String, Object>>>>() {
-                                        }.getType());
-                                for (String pageKey : pagesMap.keySet()) {
+                            if (itemsJson != null && !itemsJson.isEmpty()) {
+                                try {
+                                    Map<String, List<Map<String, Object>>> pagesMap = gson.fromJson(itemsJson,
+                                            new TypeToken<Map<String, List<Map<String, Object>>>>() {
+                                            }.getType());
+
+                                    if (pagesMap != null) {
+                                        for (String pageKey : pagesMap.keySet()) {
+                                            try {
+                                                int pageNum = Integer.parseInt(pageKey);
+                                                List<Map<String, Object>> itemsList = pagesMap.get(pageKey);
+                                                ItemStack[] items = deserializeItems(itemsList);
+                                                vaultPages.put(pageNum, items);
+                                            } catch (NumberFormatException e) {
+                                                plugin.getLogger().warning("Invalid page number in vault: " + pageKey);
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    plugin.getLogger().warning("Failed to parse pages map: " + e.getMessage());
+
                                     try {
-                                        int pageNum = Integer.parseInt(pageKey);
-                                        List<Map<String, Object>> itemsList = pagesMap.get(pageKey);
+                                        List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
+                                                new TypeToken<List<Map<String, Object>>>() {
+                                                }.getType());
                                         ItemStack[] items = deserializeItems(itemsList);
-                                        vaultPages.put(pageNum, items);
-                                    } catch (NumberFormatException e) {
-                                        plugin.getLogger().warning("Invalid page number in vault: " + pageKey);
+                                        vaultPages.put(0, items);
+                                    } catch (Exception e2) {
+                                        plugin.getLogger().severe("Failed to parse vault items: " + e2.getMessage());
                                     }
                                 }
-                            } catch (Exception e) {
+                            }
+
+                            if (overflowItemsJson != null && !overflowItemsJson.isEmpty()) {
                                 try {
-                                    List<Map<String, Object>> itemsList = gson.fromJson(itemsJson,
+                                    List<Map<String, Object>> itemsList = gson.fromJson(overflowItemsJson,
                                             new TypeToken<List<Map<String, Object>>>() {
                                             }.getType());
-                                    ItemStack[] items = deserializeItems(itemsList);
-                                    vaultPages.put(0, items);
-                                } catch (Exception e2) {
-                                    plugin.getLogger().severe("Failed to parse vault items: " + e2.getMessage());
+                                    overflowItems = deserializeItems(itemsList);
+                                } catch (Exception e) {
+                                    plugin.getLogger().warning("Failed to parse overflow items: " + e.getMessage());
                                 }
                             }
-                        }
 
-                        if (overflowItemsJson != null && !overflowItemsJson.isEmpty()) {
-                            List<Map<String, Object>> itemsList = gson.fromJson(overflowItemsJson,
-                                    new TypeToken<List<Map<String, Object>>>() {
-                                    }.getType());
-                            overflowItems = deserializeItems(itemsList);
-                        }
-
-                        if (overflowExpiryObj != null) {
-                            if (overflowExpiryObj instanceof Timestamp) {
-                                overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
-                            } else if (overflowExpiryObj instanceof String) {
-                                LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
-                                overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                            if (overflowExpiryObj != null) {
+                                if (overflowExpiryObj instanceof Timestamp) {
+                                    overflowExpiry = new Date(((Timestamp) overflowExpiryObj).getTime());
+                                } else if (overflowExpiryObj instanceof String) {
+                                    try {
+                                        LocalDateTime ldt = LocalDateTime.parse((String) overflowExpiryObj);
+                                        overflowExpiry = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+                                    } catch (Exception e) {
+                                        plugin.getLogger()
+                                                .warning("Failed to parse overflow expiry: " + e.getMessage());
+                                    }
+                                }
                             }
-                        }
 
-                        VaultService.NationVault existingVault = new VaultService.NationVault(id, nationId, vaultPages,
-                                overflowItems, overflowExpiry);
-                        nationVaults.put(nationId, existingVault);
-                        return existingVault;
+                            VaultService.NationVault existingVault = new VaultService.NationVault(id, nationId,
+                                    vaultPages,
+                                    overflowItems, overflowExpiry);
+                            nationVaults.put(nationId, existingVault);
+                            return existingVault;
+                        } catch (Exception e) {
+                            plugin.getLogger().severe("Error loading vault: " + e.getMessage());
+                            e.printStackTrace();
+                        }
                     }
 
+                    // Create a new vault if we couldn't load an existing one
                     String vaultId = UUID.randomUUID().toString();
-                    context.insertInto(
-                            DSL.table("nation_vaults"),
-                            DSL.field("id"),
-                            DSL.field("nation_id")).values(
-                                    vaultId,
-                                    nationId)
-                            .execute();
+                    try {
+                        context.insertInto(
+                                DSL.table("nation_vaults"),
+                                DSL.field("id"),
+                                DSL.field("nation_id"))
+                                .values(vaultId, nationId)
+                                .execute();
 
-                    VaultService.NationVault newVault = new VaultService.NationVault(vaultId, nationId, new HashMap<>(),
-                            null, null);
-                    nationVaults.put(nationId, newVault);
-                    return newVault;
+                        VaultService.NationVault newVault = new VaultService.NationVault(vaultId, nationId,
+                                new HashMap<>(),
+                                null, null);
+                        nationVaults.put(nationId, newVault);
+                        return newVault;
+                    } catch (Exception e) {
+                        plugin.getLogger().severe("Error creating new vault: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+
+                    return null;
                 }
             });
         });
@@ -164,13 +299,22 @@ public class VaultStorageManager {
      * Deserializes items from database format
      */
     public ItemStack[] deserializeItems(List<Map<String, Object>> itemsList) {
-        if (itemsList == null)
-            return null;
+        if (itemsList == null || itemsList.isEmpty())
+            return new ItemStack[0];
 
         List<ItemStack> items = new ArrayList<>();
         for (Map<String, Object> itemMap : itemsList) {
             try {
-                ItemStack item = ItemStack.deserialize(itemMap);
+                Map<String, Object> fixedMap = new HashMap<>();
+                for (Map.Entry<String, Object> entry : itemMap.entrySet()) {
+                    if (entry.getValue() instanceof Number && entry.getKey().equals("amount")) {
+                        fixedMap.put(entry.getKey(), ((Number) entry.getValue()).intValue());
+                    } else {
+                        fixedMap.put(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                ItemStack item = ItemStack.deserialize(fixedMap);
                 items.add(item);
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to deserialize item: " + e.getMessage());
@@ -184,20 +328,39 @@ public class VaultStorageManager {
      * Serializes items for database storage
      */
     public List<Map<String, Object>> serializeItems(ItemStack[] items) {
-        if (items == null)
-            return null;
+        if (items == null) {
+            plugin.getLogger().info("[DEBUG] Attempted to serialize null ItemStack array.");
+            return new ArrayList<>();
+        }
 
         List<Map<String, Object>> itemsList = new ArrayList<>();
-        for (ItemStack item : items) {
-            if (item != null) {
+        int nullItems = 0;
+        int successItems = 0;
+        int errorItems = 0;
+
+        for (int i = 0; i < items.length; i++) {
+            ItemStack item = items[i];
+            if (item != null && !item.getType().isAir()) {
                 try {
                     Map<String, Object> serialized = item.serialize();
                     itemsList.add(serialized);
+                    successItems++;
                 } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to serialize item: " + e.getMessage());
+                    plugin.getLogger().warning("[DEBUG] Failed to serialize item at index " + i + " (Type: "
+                            + item.getType() + "): " + e.getMessage());
+                    errorItems++;
                 }
+            } else {
+                nullItems++;
             }
         }
+
+        plugin.getLogger().info("[DEBUG] Item serialization summary: " +
+                "input_array_length=" + items.length +
+                ", successful=" + successItems +
+                ", null_or_air=" + nullItems +
+                ", errors=" + errorItems +
+                ", output_list_size=" + itemsList.size());
 
         return itemsList;
     }
@@ -220,6 +383,6 @@ public class VaultStorageManager {
             for (VaultService.NationVault vault : vaultsToUpdate) {
                 saveVault(vault);
             }
-        }, 1200, 1200); // Check every minute (20 ticks * 60)
+        }, 1200, 1200);
     }
 }
