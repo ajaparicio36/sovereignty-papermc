@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -203,5 +204,35 @@ public class TradeItemsUtil {
 
         item.setItemMeta(meta);
         return item;
+    }
+
+    /**
+     * Deserialize a list of serialized items back into ItemStack array
+     *
+     * @param itemsList List of serialized item maps
+     * @param plugin    The plugin instance for logging
+     * @return Array of ItemStacks
+     */
+    public static ItemStack[] deserializeItems(List<Map<String, Object>> itemsList, Sovereignty plugin) {
+        if (itemsList == null) {
+            return new ItemStack[0];
+        }
+
+        ItemStack[] items = new ItemStack[itemsList.size()];
+        for (int i = 0; i < itemsList.size(); i++) {
+            Map<String, Object> itemMap = itemsList.get(i);
+            if (itemMap != null) {
+                try {
+                    items[i] = ItemStack.deserialize(itemMap);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to deserialize trade item: " + e.getMessage());
+                    // Use an empty item instead of null to prevent NPEs
+                    items[i] = new ItemStack(Material.AIR);
+                }
+            } else {
+                items[i] = null;
+            }
+        }
+        return items;
     }
 }
