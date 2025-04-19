@@ -10,13 +10,21 @@ commands:
     description: Main nation command
     usage: /nation <subcommand>
     aliases: [n]
+    permission: sovereignty.command.nation
   war:
     description: War management commands
     usage: /war <subcommand>
+    permission: sovereignty.command.war
   vault:
     description: Access nation vault
     usage: /vault
+    permission: sovereignty.command.vault
+  admin:
+    description: Administrative commands
+    usage: /admin <subcommand>
+    permission: sovereignty.command.admin
 permissions:
+  # Admin permissions
   sovereignty.admin.bypass:
     description: Bypass protection
     default: op
@@ -25,4 +33,90 @@ permissions:
     default: op
   sovereignty.admin.wars:
     description: Cancel ongoing wars
+    default: op
+  sovereignty.admin.setpower:
+    description: Set nation power
+    default: op
+
+  # Base command permissions
+  sovereignty.command.nation:
+    description: Use the nation command
+    default: true
+  sovereignty.command.war:
+    description: Use the war command
+    default: true
+  sovereignty.command.vault:
+    description: Use the vault command
+    default: true
+  sovereignty.command.admin:
+    description: Use admin commands
+    default: op
+
+  # Nation subcommand permissions
+  sovereignty.command.nation.create:
+    description: Create a new nation
+    default: true
+  sovereignty.command.nation.disband:
+    description: Disband your nation
+    default: true
+  sovereignty.command.nation.info:
+    description: View information about a nation
+    default: true
+  sovereignty.command.nation.claim:
+    description: Claim land for your nation
+    default: true
+  sovereignty.command.nation.unclaim:
+    description: Unclaim land from your nation
+    default: true
+  sovereignty.command.nation.invite:
+    description: Invite players to your nation
+    default: true
+  sovereignty.command.nation.join:
+    description: Join a nation
+    default: true
+  sovereignty.command.nation.leave:
+    description: Leave your nation
+    default: true
+  sovereignty.command.nation.appoint:
+    description: Appoint players to roles in your nation
+    default: true
+  sovereignty.command.nation.vaultnpc:
+    description: Create or manage vault NPCs
+    default: true
+  sovereignty.command.nation.trade:
+    description: Manage nation trades
+    default: true
+
+  # Alliance subcommand permissions
+  sovereignty.command.nation.alliance:
+    description: Manage nation alliances
+    default: true
+  sovereignty.command.nation.alliance.propose:
+    description: Propose an alliance to another nation
+    default: true
+  sovereignty.command.nation.alliance.accept:
+    description: Accept an alliance proposal
+    default: true
+  sovereignty.command.nation.alliance.deny:
+    description: Deny an alliance proposal
+    default: true
+  sovereignty.command.nation.alliance.list:
+    description: List your nation's alliances
+    default: true
+  sovereignty.command.nation.alliance.break:
+    description: Break an existing alliance
+    default: true
+
+  # War command permissions
+  sovereignty.command.war.declare:
+    description: Declare war on another nation
+    default: true
+  sovereignty.command.war.list:
+    description: List active wars
+    default: true
+  sovereignty.command.war.info:
+    description: View information about wars
+    default: true
+  sovereignty.command.war.cancel:
+    description: Cancel wars (admin only)
     default: op

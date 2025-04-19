@@ -161,6 +161,8 @@ alliance:
   propose-usage: "<red>Usage: /nation propose <nation>"
   propose-failed: "<red>Failed to propose an alliance. Make sure the nation exists and is not already allied."
   accept-usage: "<red>Usage: /nation accept <nation>"
+  break-usage: "<red>Usage: /nation break <nation>"
+  deny-usage: "<red>Usage: /nation deny <nation>"
   accept-failed: "<red>Failed to accept the alliance. Make sure the nation exists and is not already allied."
   decline-usage: "<red>Usage: /nation decline <nation>"
   decline-failed: "<red>Failed to decline the alliance. Make sure the nation exists and is not already allied."
@@ -181,6 +183,8 @@ trade:
   items-withdrawn: "<green>Items withdrawn from nation vault!"
   overflow-warning: "<yellow>Some items were placed in overflow storage and will expire in {time}!"
   items-expired: "<red>Some items in your nation vault have expired and been deleted!"
+  no-trades: "<red>You have no active trades.</red>"
+  cannot-trade-self: "<red>You cannot trade with your own nation."
 
 # Protection messages
 protection:
