@@ -50,12 +50,17 @@ public class TradeExecutionHandler {
 
                 String sendingItemsJson = vaultRecord.get("sending_items_vault", String.class);
                 final boolean[] tradeSuccess = { false };
+                final double[] tradeItemRatio = { 0.0 };
 
                 if (sendingItemsJson != null && !sendingItemsJson.isEmpty()) {
                     // Check if required items are present
                     List<Map<String, Object>> requiredItemsList = tradeService.getGson().fromJson(sendingItemsJson,
                             new TypeToken<List<Map<String, Object>>>() {
                             }.getType());
+
+                    // Calculate the trade item ratio before transferring
+                    ItemStack[] items = TradeItemsUtil.deserializeItems(requiredItemsList, plugin);
+                    tradeItemRatio[0] = calculateTradeItemRatio(items);
 
                     // Transfer items from sender to receiver's vault
                     Nation receivingNation = nationService.getNation(trade.getReceivingNationId());
@@ -64,9 +69,6 @@ public class TradeExecutionHandler {
                         vaultService.getOrCreateVault(trade.getReceivingNationId()).thenAccept(receiverVault -> {
                             if (receiverVault != null) {
                                 try {
-                                    // Deserialize the items
-                                    ItemStack[] items = TradeItemsUtil.deserializeItems(requiredItemsList, plugin);
-
                                     // Add items to receiver's vault overflow
                                     List<ItemStack> itemsList = Arrays.stream(items)
                                             .filter(Objects::nonNull)
@@ -107,14 +109,25 @@ public class TradeExecutionHandler {
                     // Award power if consecutive trades reached threshold
                     int consecutiveNeeded = plugin.getConfigManager().getTradeConsecutiveForPower();
                     if (trade.getConsecutiveTrades() >= consecutiveNeeded) {
-                        // Award power to both nations
+                        // Award power to both nations, scaled by trade item ratio
                         Nation sendingNation = nationService.getNation(trade.getSendingNationId());
                         Nation receivingNation = nationService.getNation(trade.getReceivingNationId());
 
                         if (sendingNation != null && receivingNation != null) {
                             double powerIncrement = plugin.getConfigManager().getTradePowerIncrement();
-                            sendingNation.addPower(powerIncrement);
-                            receivingNation.addPower(powerIncrement);
+
+                            // Apply ratio to power gained (cannot be less than 10% of original value)
+                            double adjustedPowerIncrement = Math.max(
+                                    powerIncrement * tradeItemRatio[0],
+                                    powerIncrement * 0.1);
+
+                            // Log the power adjustment
+                            plugin.getLogger().info("Trade " + trade.getId() + " power adjustment: " +
+                                    "Original: " + powerIncrement + ", Ratio: " + tradeItemRatio[0] +
+                                    ", Adjusted: " + adjustedPowerIncrement);
+
+                            sendingNation.addPower(adjustedPowerIncrement);
+                            receivingNation.addPower(adjustedPowerIncrement);
 
                             nationService.saveNation(sendingNation);
                             nationService.saveNation(receivingNation);
@@ -146,5 +159,34 @@ public class TradeExecutionHandler {
                 return null;
             }
         });
+    }
+
+    /**
+     * Calculates the ratio of actual items to the maximum possible volume
+     * Max volume is defined as 9 slots of full stacks (9 * 64 = 576 items)
+     * 
+     * @param items The items in the trade
+     * @return A ratio between 0.0 and 1.0
+     */
+    private double calculateTradeItemRatio(ItemStack[] items) {
+        if (items == null) {
+            return 0.0;
+        }
+
+        int totalItems = 0;
+        int maxStackSize = 64;
+        int maxSlots = 9;
+
+        for (ItemStack item : items) {
+            if (item != null) {
+                totalItems += item.getAmount();
+            }
+        }
+
+        int maxPossibleItems = maxSlots * maxStackSize; // 9 slots × 64 stack size = 576 items
+        double ratio = (double) totalItems / maxPossibleItems;
+
+        // Cap at 1.0 maximum
+        return Math.min(ratio, 1.0);
     }
 }

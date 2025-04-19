@@ -100,6 +100,35 @@ public class TradeItemsUtil {
         return item;
     }
 
+    /**
+     * Calculates the total number of items in an array of ItemStacks
+     * 
+     * @param items Array of ItemStack objects
+     * @return Total number of individual items
+     */
+    public static int calculateTotalItemCount(ItemStack[] items) {
+        if (items == null)
+            return 0;
+
+        int total = 0;
+        for (ItemStack item : items) {
+            if (item != null) {
+                total += item.getAmount();
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Calculates the maximum possible item volume for a given number of slots
+     * 
+     * @param slots Number of inventory slots
+     * @return Maximum possible item count (slots × 64)
+     */
+    public static int calculateMaxItemVolume(int slots) {
+        return slots * 64; // Most items have a maximum stack size of 64
+    }
+
     public static CompletableFuture<Boolean> createTrade(Sovereignty plugin, TradeService tradeService, Player player,
             String senderNationId, String receiverNationId,
             List<ItemStack> items, int interval) {

@@ -177,6 +177,35 @@ public class TradeVaultHandler {
         lore.add(net.kyori.adventure.text.Component.text("Status: " + trade.getStatus())
                 .color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
 
+        // Add power information based on consecutive trades
+        int consecutiveNeeded = plugin.getConfigManager().getTradeConsecutiveForPower();
+        lore.add(net.kyori.adventure.text.Component
+                .text("Consecutive: " + trade.getConsecutiveTrades() + "/" + consecutiveNeeded)
+                .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+
+        // Add item ratio information
+        if (isSender) {
+            ItemStack[] vaultItems = getTradeVaultItems(trade.getId(), true);
+            int totalItems = TradeItemsUtil.calculateTotalItemCount(vaultItems);
+            int maxItems = TradeItemsUtil.calculateMaxItemVolume(9);
+            double ratio = (double) totalItems / maxItems;
+            String formattedRatio = String.format("%.1f%%", ratio * 100);
+
+            lore.add(net.kyori.adventure.text.Component
+                    .text("Item Volume: " + formattedRatio + " (" + totalItems + "/" + maxItems + ")")
+                    .color(ratio >= 0.5 ? net.kyori.adventure.text.format.NamedTextColor.GREEN
+                            : net.kyori.adventure.text.format.NamedTextColor.RED));
+
+            // Add power info if close to gaining power
+            if (trade.getConsecutiveTrades() >= consecutiveNeeded - 2) {
+                double powerIncrement = plugin.getConfigManager().getTradePowerIncrement();
+                double adjustedPower = Math.max(powerIncrement * ratio, powerIncrement * 0.1);
+                String formattedPower = String.format("%.1f", adjustedPower);
+                lore.add(net.kyori.adventure.text.Component.text("Est. Power Gain: " + formattedPower)
+                        .color(net.kyori.adventure.text.format.NamedTextColor.AQUA));
+            }
+        }
+
         meta.lore(lore);
         infoButton.setItemMeta(meta);
         return infoButton;
