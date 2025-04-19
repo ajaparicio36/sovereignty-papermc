@@ -4,6 +4,7 @@ import com.tatayless.sovereignty.commands.CommandManager;
 import com.tatayless.sovereignty.config.ConfigManager;
 import com.tatayless.sovereignty.database.DatabaseManager;
 import com.tatayless.sovereignty.listeners.ListenerManager;
+import com.tatayless.sovereignty.listeners.VaultListener;
 import com.tatayless.sovereignty.localization.LocalizationManager;
 import com.tatayless.sovereignty.services.ServiceManager;
 import com.tatayless.sovereignty.services.VaultUpdateManager;
@@ -46,6 +47,17 @@ public class Sovereignty extends JavaPlugin {
         // Initialize services
         serviceManager = new ServiceManager(this);
         serviceManager.initializeServices();
+
+        // Initialize the vault service
+        serviceManager.getVaultService().initialize();
+
+        // Register vault service event handlers
+        serviceManager.getVaultService().registerEventHandlers();
+
+        // Register the dedicated vault listener
+        getServer().getPluginManager().registerEvents(
+                new VaultListener(this, serviceManager.getVaultService()),
+                this);
 
         // Initialize commands
         commandManager = new CommandManager(this);

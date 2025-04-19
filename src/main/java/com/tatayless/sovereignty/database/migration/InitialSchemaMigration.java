@@ -163,10 +163,10 @@ public class InitialSchemaMigration implements Migration {
                 "nation_vault_id VARCHAR(36) NOT NULL UNIQUE, " +
                 "coordinates VARCHAR(255) NOT NULL, " + // Store as "x,y,z,world"
                 "entity_id INT, " + // Entity ID of the Villager NPC
-                "world TEXT, " + // Added for direct location storage
-                "x DOUBLE, " + // Added for direct x coordinate
-                "y DOUBLE, " + // Added for direct y coordinate
-                "z DOUBLE, " + // Added for direct z coordinate
+                "world VARCHAR(255), " + // Changed TEXT to VARCHAR for MySQL compatibility
+                "x DOUBLE NOT NULL, " + // Added NOT NULL to ensure coordinates are always present
+                "y DOUBLE NOT NULL, " + // Added NOT NULL to ensure coordinates are always present
+                "z DOUBLE NOT NULL, " + // Added NOT NULL to ensure coordinates are always present
                 "created_by VARCHAR(36), " + // Added creator's player ID
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
@@ -281,9 +281,9 @@ public class InitialSchemaMigration implements Migration {
                 "coordinates TEXT NOT NULL, " + // Store as "x,y,z,world"
                 "entity_id INTEGER, " + // Entity ID of the Villager NPC
                 "world TEXT, " + // Added for direct location storage
-                "x DOUBLE, " + // Added for direct x coordinate
-                "y DOUBLE, " + // Added for direct y coordinate
-                "z DOUBLE, " + // Added for direct z coordinate
+                "x DOUBLE NOT NULL, " + // Added NOT NULL to ensure coordinates are always present
+                "y DOUBLE NOT NULL, " + // Added NOT NULL to ensure coordinates are always present
+                "z DOUBLE NOT NULL, " + // Added NOT NULL to ensure coordinates are always present
                 "created_by TEXT, " + // Added creator's player ID
                 "created_at TEXT DEFAULT (datetime('now')), " +
                 "updated_at TEXT DEFAULT (datetime('now')), " +

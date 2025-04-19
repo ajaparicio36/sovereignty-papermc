@@ -270,6 +270,10 @@ public class NationService {
         return new ArrayList<>(nations.values());
     }
 
+    public Map<String, Nation> getNations() {
+        return nations;
+    }
+
     public boolean isChunkClaimed(ChunkLocation chunkLocation) {
         return chunkOwners.containsKey(chunkLocation);
     }
