@@ -204,33 +204,19 @@ public class VaultService {
             // Copy items to avoid modifying the stored array
             ItemStack[] displayItems = new ItemStack[size];
             System.arraycopy(pageItems, 0, displayItems, 0, Math.min(pageItems.length, size));
-
-            // Don't overwrite navigation buttons
-            if (page > 0 && size > PREV_PAGE_SLOT) {
-                displayItems[PREV_PAGE_SLOT] = createNavigationItem(Material.ARROW, "Previous Page");
-            }
-
-            // Check if we need a next page button (if there are more pages or overflow
-            // items)
-            int maxPages = calculateMaxPages(nation.getPowerLevel());
-            if ((page < maxPages - 1 && vault.hasPage(page + 1)) ||
-                    (page == maxPages - 1 && vault.hasOverflow())) {
-                if (size > NEXT_PAGE_SLOT) {
-                    displayItems[NEXT_PAGE_SLOT] = createNavigationItem(Material.ARROW, "Next Page");
-                }
-            }
-
             inventory.setContents(displayItems);
-        } else {
-            // Add navigation buttons for empty pages if needed
-            if (page > 0) {
-                inventory.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.ARROW, "Previous Page"));
-            }
+        }
 
-            int maxPages = calculateMaxPages(nation.getPowerLevel());
-            if (page < maxPages - 1) {
-                inventory.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.ARROW, "Next Page"));
-            }
+        // Add navigation buttons - do this AFTER setting the inventory contents
+        if (page > 0) {
+            inventory.setItem(PREV_PAGE_SLOT, createNavigationItem(Material.ARROW, "Previous Page"));
+        }
+
+        // Check if we need a next page button (if there are more pages or overflow
+        // items)
+        int maxPages = calculateMaxPages(nation.getPowerLevel());
+        if ((page < maxPages - 1) || (page == maxPages - 1 && vault.hasOverflow())) {
+            inventory.setItem(NEXT_PAGE_SLOT, createNavigationItem(Material.ARROW, "Next Page"));
         }
 
         player.openInventory(inventory);
@@ -368,20 +354,40 @@ public class VaultService {
         if (!title.startsWith("Nation Vault:"))
             return;
 
-        // Handle navigation buttons
-        if (event.getSlot() == NEXT_PAGE_SLOT && event.getCurrentItem() != null &&
-                event.getCurrentItem().getType() == Material.ARROW) {
+        // Handle navigation buttons - cancel all interactions with them
+        if ((event.getSlot() == NEXT_PAGE_SLOT && isNavigationButton(event.getCurrentItem())) ||
+                (event.getSlot() == PREV_PAGE_SLOT && isNavigationButton(event.getCurrentItem()))) {
             event.setCancelled(true);
-            navigateVault(player, session.getNationId(), session.getPage() + 1);
+
+            // Handle actual navigation when clicking the buttons
+            if (event.getClick().isLeftClick()) {
+                if (event.getSlot() == NEXT_PAGE_SLOT) {
+                    navigateVault(player, session.getNationId(), session.getPage() + 1);
+                } else {
+                    navigateVault(player, session.getNationId(), session.getPage() - 1);
+                }
+            }
             return;
         }
 
-        if (event.getSlot() == PREV_PAGE_SLOT && event.getCurrentItem() != null &&
-                event.getCurrentItem().getType() == Material.ARROW) {
+        // Also prevent navigation buttons from being taken via shift-click or other
+        // methods
+        if (isNavigationButton(event.getCurrentItem()) ||
+                (event.getClick().isShiftClick() &&
+                        (event.getSlot() == NEXT_PAGE_SLOT || event.getSlot() == PREV_PAGE_SLOT))) {
             event.setCancelled(true);
-            navigateVault(player, session.getNationId(), session.getPage() - 1);
             return;
         }
+    }
+
+    private boolean isNavigationButton(ItemStack item) {
+        if (item == null || item.getType() != Material.ARROW)
+            return false;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null)
+            return false;
+        String name = meta.getDisplayName();
+        return name != null && (name.contains("Previous Page") || name.contains("Next Page"));
     }
 
     private void navigateVault(Player player, String nationId, int newPage) {
@@ -431,19 +437,16 @@ public class VaultService {
     private void updateVaultPage(Player player, NationVault vault, int page) {
         Inventory inventory = player.getOpenInventory().getTopInventory();
 
-        // Create a copy of the inventory contents (except navigation buttons)
-        ItemStack[] contents = inventory.getContents().clone();
+        // Create a copy of the inventory contents, preserving the navigation buttons
+        // position but not saving them
+        ItemStack[] contents = new ItemStack[inventory.getSize()];
 
-        // Remove navigation buttons
-        int size = contents.length;
-        if (size > PREV_PAGE_SLOT && contents[PREV_PAGE_SLOT] != null &&
-                contents[PREV_PAGE_SLOT].getType() == Material.ARROW) {
-            contents[PREV_PAGE_SLOT] = null;
-        }
-
-        if (size > NEXT_PAGE_SLOT && contents[NEXT_PAGE_SLOT] != null &&
-                contents[NEXT_PAGE_SLOT].getType() == Material.ARROW) {
-            contents[NEXT_PAGE_SLOT] = null;
+        for (int i = 0; i < contents.length; i++) {
+            // Skip navigation button slots
+            if (i == PREV_PAGE_SLOT || i == NEXT_PAGE_SLOT) {
+                continue;
+            }
+            contents[i] = inventory.getItem(i);
         }
 
         // Update the vault with the new contents

@@ -249,7 +249,8 @@ public class TradeService {
                 break;
             case SENDING_VAULT:
             case RECEIVING_VAULT:
-                // Regular vault functionality, no special handling needed
+                // Handle vault interactions safely including buttons
+                vaultHandler.handleTradeVaultClick(event, session);
                 break;
         }
     }
@@ -271,8 +272,11 @@ public class TradeService {
             vaultHandler.updateTradeVault(player, session, event.getInventory());
         }
 
-        // Remove session if appropriate
-        if (!player.getOpenInventory().title().toString().contains("Trade")) {
+        // Only remove session if player is not navigating within trade menus
+        // Check the title to ensure they're leaving trade-related inventories
+        @SuppressWarnings("unused")
+        String inventoryTitle = event.getView().title().toString().toLowerCase();
+        if (!player.getOpenInventory().title().toString().toLowerCase().contains("trade")) {
             playerSessions.remove(playerUuid);
         }
     }
@@ -309,6 +313,22 @@ public class TradeService {
 
     public Gson getGson() {
         return gson;
+    }
+
+    public TradeVaultHandler getVaultHandler() {
+        return vaultHandler;
+    }
+
+    public TradeUIHandler getUiHandler() {
+        return uiHandler;
+    }
+
+    public TradeNPCHandler getNpcHandler() {
+        return npcHandler;
+    }
+
+    public TradeExecutionHandler getExecutionHandler() {
+        return executionHandler;
     }
 
     // Trade utils
