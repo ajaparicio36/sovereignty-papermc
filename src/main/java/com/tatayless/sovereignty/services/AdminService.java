@@ -32,7 +32,10 @@ public class AdminService {
             return CompletableFuture.completedFuture(false);
         }
 
-        nation.setPower(power);
+        nation.setPowerByAdmin(power);
+        // Log the action for debugging
+        plugin.getLogger().info("Admin set nation " + nation.getName() + " power to " + power +
+                " (Power level: " + nation.getPowerLevel() + ")");
         return nationService.saveNation(nation);
     }
 
@@ -49,7 +52,10 @@ public class AdminService {
             return CompletableFuture.completedFuture(false);
         }
 
-        nation.setPower(power);
+        nation.setPowerByAdmin(power);
+        // Log the action for debugging
+        plugin.getLogger().info("Admin set nation " + nation.getName() + " power to " + power +
+                " (Power level: " + nation.getPowerLevel() + ")");
         return nationService.saveNation(nation);
     }
 }

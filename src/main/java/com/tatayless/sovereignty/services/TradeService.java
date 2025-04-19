@@ -230,6 +230,12 @@ public class TradeService {
 
         TradeSession session = playerSessions.get(playerUuid);
 
+        // Handle specific inventory types based on the inventory holder
+        if (event.getInventory().getHolder() instanceof TradeVaultHandler.TradeVaultInventoryHolder) {
+            vaultHandler.handleTradeVaultClick(event, session);
+            return;
+        }
+
         // Handle different inventory types based on session type
         switch (session.getType()) {
             case CREATE:
@@ -249,7 +255,10 @@ public class TradeService {
                 break;
             case SENDING_VAULT:
             case RECEIVING_VAULT:
-                // Regular vault functionality, no special handling needed
+                // Handle vault interactions safely including buttons
+                // This case should rarely be reached now that we check for
+                // TradeVaultInventoryHolder
+                vaultHandler.handleTradeVaultClick(event, session);
                 break;
         }
     }
@@ -265,14 +274,15 @@ public class TradeService {
         TradeSession session = playerSessions.get(playerUuid);
 
         // If this was a vault inventory, update the contents
-        if (session.getType() == TradeSessionType.SENDING_VAULT ||
-                session.getType() == TradeSessionType.RECEIVING_VAULT) {
-
+        if (event.getInventory().getHolder() instanceof TradeVaultHandler.TradeVaultInventoryHolder) {
             vaultHandler.updateTradeVault(player, session, event.getInventory());
-        }
+            vaultHandler.handleInventoryClose(player, session);
 
-        // Remove session if appropriate
-        if (!player.getOpenInventory().title().toString().contains("Trade")) {
+            // Don't remove the session here, as the player may be navigating between trade
+            // menus
+        }
+        // Only remove session if player is not navigating within trade menus
+        else if (!player.getOpenInventory().title().toString().toLowerCase().contains("trade")) {
             playerSessions.remove(playerUuid);
         }
     }
@@ -309,6 +319,22 @@ public class TradeService {
 
     public Gson getGson() {
         return gson;
+    }
+
+    public TradeVaultHandler getVaultHandler() {
+        return vaultHandler;
+    }
+
+    public TradeUIHandler getUiHandler() {
+        return uiHandler;
+    }
+
+    public TradeNPCHandler getNpcHandler() {
+        return npcHandler;
+    }
+
+    public TradeExecutionHandler getExecutionHandler() {
+        return executionHandler;
     }
 
     // Trade utils

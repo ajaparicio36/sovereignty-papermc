@@ -13,6 +13,9 @@ import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 
 public class NPCListener implements Listener {
@@ -89,6 +92,75 @@ public class NPCListener implements Listener {
 
             // Open the corresponding trade vault
             tradeService.openTradeVault(player, nationId, tradeId);
+        }
+    }
+
+    /**
+     * Prevent any damage to Vault or Trade NPCs
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityDamage(EntityDamageEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof Villager)) {
+            return;
+        }
+
+        int entityId = entity.getEntityId();
+        String vaultId = vaultService.getVaultIdFromEntity(entityId);
+        String tradeId = tradeService.getTradeIdFromEntity(entityId);
+
+        // If this is a vault NPC or trade NPC, cancel all damage
+        if (vaultId != null || tradeId != null) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Prevent entities from targeting Vault or Trade NPCs
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityTarget(EntityTargetEvent event) {
+        if (event.getTarget() == null) {
+            return;
+        }
+
+        Entity target = event.getTarget();
+        if (!(target instanceof Villager)) {
+            return;
+        }
+
+        int entityId = target.getEntityId();
+        String vaultId = vaultService.getVaultIdFromEntity(entityId);
+        String tradeId = tradeService.getTradeIdFromEntity(entityId);
+
+        // If this is a vault NPC or trade NPC, prevent targeting
+        if (vaultId != null || tradeId != null) {
+            event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Prevent entities from damaging Vault or Trade NPCs
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof Villager)) {
+            return;
+        }
+
+        int entityId = entity.getEntityId();
+        String vaultId = vaultService.getVaultIdFromEntity(entityId);
+        String tradeId = tradeService.getTradeIdFromEntity(entityId);
+
+        // If this is a vault NPC or trade NPC, cancel all damage
+        if (vaultId != null || tradeId != null) {
+            event.setCancelled(true);
+            // If a player is attacking, let them know it's protected
+            if (event.getDamager() instanceof Player) {
+                Player player = (Player) event.getDamager();
+                player.sendMessage(plugin.getLocalizationManager().getComponent("npc.protected"));
+            }
         }
     }
 }

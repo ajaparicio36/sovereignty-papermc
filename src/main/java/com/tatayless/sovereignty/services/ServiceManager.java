@@ -38,7 +38,8 @@ public class ServiceManager {
         warService.loadWars();
         allianceService.loadAlliances();
         tradeService.loadTrades();
-        vaultService.loadVaults();
+        // Replace direct loadVaults with initialize to ensure proper setup
+        vaultService.initialize();
 
         // Start tasks
         powerService.startRecalculationTask();

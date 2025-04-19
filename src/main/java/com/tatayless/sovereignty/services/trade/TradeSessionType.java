@@ -5,7 +5,7 @@ public enum TradeSessionType {
     LIST,
     DELETE_SELECT,
     DELETE_CONFIRM,
+    NPC_CREATE,
     SENDING_VAULT,
-    RECEIVING_VAULT,
-    NPC_CREATE
+    RECEIVING_VAULT
 }

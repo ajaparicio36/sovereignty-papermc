@@ -11,6 +11,7 @@ import org.jooq.impl.DSL;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class DatabaseManager {
@@ -31,6 +32,41 @@ public class DatabaseManager {
         setupDataSource();
         tableManager = new TableManager(plugin, configManager.isMySQL());
         createTablesIfNotExist();
+
+        // Make sure migrations are applied during initialization
+        try (Connection conn = getConnection()) {
+            DSLContext context = createContextSafe(conn);
+            boolean migrationsApplied = tableManager.getMigrationManager().applyMigrations(conn, context);
+            if (!migrationsApplied) {
+                throw new SQLException("Failed to apply database migrations");
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to apply migrations: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Explicitly run database migrations.
+     * This is useful when you want to force migrations to run
+     * outside of the normal startup sequence.
+     */
+    public CompletableFuture<Boolean> runMigrations() {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Connection conn = getConnection()) {
+                DSLContext context = createContextSafe(conn);
+                boolean success = tableManager.getMigrationManager().applyMigrations(conn, context);
+                future.complete(success);
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to run migrations: " + e.getMessage());
+                e.printStackTrace();
+                future.completeExceptionally(e);
+            }
+        });
+
+        return future;
     }
 
     private void setupDataSource() {
@@ -105,13 +141,16 @@ public class DatabaseManager {
             plugin.getLogger().info("Got connection, creating context...");
             DSLContext context = DSL.using(conn, sqlDialect);
             plugin.getLogger().info("Calling tableManager.createTables...");
-            // Don't use join() here as it blocks the current thread
-            tableManager.createTables(context).exceptionally(ex -> {
+
+            // Change to synchronous table creation to ensure tables exist before continuing
+            try {
+                tableManager.createTablesSync(conn, context);
+                plugin.getLogger().info("Tables created successfully");
+            } catch (Exception ex) {
                 plugin.getLogger().severe("Error in table creation: " + ex.getMessage());
                 ex.printStackTrace();
-                return null;
-            });
-            plugin.getLogger().info("Table creation has been scheduled asynchronously");
+                throw ex;
+            }
         } catch (Exception e) {
             plugin.getLogger().severe("Error setting up tables: " + e.getMessage());
             e.printStackTrace();

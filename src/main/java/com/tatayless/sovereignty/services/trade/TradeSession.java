@@ -1,10 +1,15 @@
 package com.tatayless.sovereignty.services.trade;
 
+/**
+ * Represents a player's active trade session.
+ * This class tracks the state and context of a player interacting with the
+ * trade system.
+ */
 public class TradeSession {
-    private final TradeSessionType type;
-    private final String nationId;
-    private final String partnerNationId;
-    private final int interval;
+    private TradeSessionType type;
+    private String nationId;
+    private String partnerNationId;
+    private int interval;
     private String tradeId;
 
     public TradeSession(TradeSessionType type, String nationId, String partnerNationId, int interval) {
@@ -12,6 +17,11 @@ public class TradeSession {
         this.nationId = nationId;
         this.partnerNationId = partnerNationId;
         this.interval = interval;
+    }
+
+    // Used for sessions where we're working with an existing trade
+    public void setTradeId(String tradeId) {
+        this.tradeId = tradeId;
     }
 
     public TradeSessionType getType() {
@@ -32,9 +42,5 @@ public class TradeSession {
 
     public String getTradeId() {
         return tradeId;
-    }
-
-    public void setTradeId(String tradeId) {
-        this.tradeId = tradeId;
     }
 }

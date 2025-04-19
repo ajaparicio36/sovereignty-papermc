@@ -41,11 +41,20 @@ public class NationService {
                     String id = record.get("id", String.class);
                     String name = record.get("name", String.class);
                     double power = record.get("power", Double.class);
-                    @SuppressWarnings("unused")
                     int powerLevel = record.get("power_level", Integer.class);
 
+                    // Load admin power flag (default to false if column doesn't exist)
+                    boolean adminSetPower = false;
+                    try {
+                        adminSetPower = record.get("admin_set_power", Boolean.class);
+                    } catch (Exception ignored) {
+                        // Column might not exist yet, use default false
+                    }
+
                     Nation nation = new Nation(id, name);
-                    nation.setPower(power);
+                    nation.setPower(power); // Set power first
+                    nation.setAdminSetPower(adminSetPower); // Then set the flag
+                    nation.setPowerLevel(powerLevel); // Explicitly set the power level from database
 
                     // Load claimed chunks
                     String claimedChunksJson = record.get("claimed_chunks", String.class);
@@ -261,6 +270,10 @@ public class NationService {
         return new ArrayList<>(nations.values());
     }
 
+    public Map<String, Nation> getNations() {
+        return nations;
+    }
+
     public boolean isChunkClaimed(ChunkLocation chunkLocation) {
         return chunkOwners.containsKey(chunkLocation);
     }
@@ -394,6 +407,7 @@ public class NationService {
                             .set(DSL.field("name"), nation.getName())
                             .set(DSL.field("power"), nation.getPower())
                             .set(DSL.field("power_level"), nation.getPowerLevel())
+                            .set(DSL.field("admin_set_power"), nation.isAdminSetPower())
                             .set(DSL.field("claimed_chunks"), claimedChunksJson)
                             .set(DSL.field("annexed_chunks"), annexedChunksJson)
                             .set(DSL.field("alliances"), alliancesJson)

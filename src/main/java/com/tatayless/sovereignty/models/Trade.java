@@ -95,4 +95,9 @@ public class Trade {
 
         return new Date().after(nextExecution);
     }
+
+    // Check if nation is the sender for this trade
+    public boolean isSender(String nationId) {
+        return sendingNationId.equals(nationId);
+    }
 }
