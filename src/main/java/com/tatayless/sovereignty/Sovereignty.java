@@ -5,7 +5,6 @@ import com.tatayless.sovereignty.config.ConfigManager;
 import com.tatayless.sovereignty.database.DatabaseManager;
 import com.tatayless.sovereignty.listeners.ListenerManager;
 import com.tatayless.sovereignty.localization.LocalizationManager;
-import com.tatayless.sovereignty.commands.admin.AdminCommandExecutor;
 import com.tatayless.sovereignty.services.ServiceManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -46,11 +45,6 @@ public class Sovereignty extends JavaPlugin {
         // Initialize commands
         commandManager = new CommandManager(this);
         commandManager.registerCommands();
-
-        // Register admin command
-        AdminCommandExecutor adminCommandExecutor = new AdminCommandExecutor(this);
-        getCommand("admin").setExecutor(adminCommandExecutor);
-        getCommand("admin").setTabCompleter(adminCommandExecutor);
 
         // Initialize event listeners
         listenerManager = new ListenerManager(this);
