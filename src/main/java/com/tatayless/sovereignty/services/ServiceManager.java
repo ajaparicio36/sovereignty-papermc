@@ -13,6 +13,7 @@ public class ServiceManager {
     private TradeService tradeService;
     private VaultService vaultService;
     private PowerService powerService;
+    private AdminService adminService;
 
     public ServiceManager(Sovereignty plugin) {
         this.plugin = plugin;
@@ -29,6 +30,7 @@ public class ServiceManager {
         tradeService = new TradeService(plugin, nationService, vaultService);
         powerService = new PowerService(plugin, nationService, playerService, allianceService, tradeService,
                 warService);
+        adminService = new AdminService(plugin, nationService);
 
         // Load data
         playerService.loadPlayers();
@@ -41,6 +43,10 @@ public class ServiceManager {
         // Start tasks
         powerService.startRecalculationTask();
         tradeService.startTradeExecutionTask();
+    }
+
+    public AdminService getAdminService() {
+        return adminService;
     }
 
     public NationService getNationService() {

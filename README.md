@@ -25,45 +25,49 @@ Sovereignty is a comprehensive nation management plugin for Minecraft servers th
 
 ### Nation Commands
 
-| Command                    | Description                                | Permission       |
-| -------------------------- | ------------------------------------------ | ---------------- |
-| `/nation create <name>`    | Create a new nation                        | Default          |
-| `/nation claim`            | Claim the current chunk for your nation    | Default          |
-| `/nation unclaim`          | Remove nation claim from the current chunk | Default          |
-| `/nation info [nation]`    | View information about a nation            | Default          |
-| `/nation join <nation>`    | Request to join a nation                   | Default          |
-| `/nation leave`            | Leave your current nation                  | Default          |
-| `/nation invite <player>`  | Invite a player to your nation             | Nation officers  |
-| `/nation kick <player>`    | Remove a player from your nation           | Nation officers  |
-| `/nation promote <player>` | Promote a nation member                    | Nation president |
-| `/nation demote <player>`  | Demote a nation officer                    | Nation president |
-| `/nation disband`          | Disband your nation                        | Nation president |
-| `/nation ally <nation>`    | Request or accept an alliance              | Nation officers  |
-| `/nation unally <nation>`  | End an alliance                            | Nation officers  |
+| Command                                    | Description                                      | Permission                                |
+| ------------------------------------------ | ------------------------------------------------ | ----------------------------------------- | --------------- |
+| `/nation create <name>`                    | Create a new nation                              | Default                                   |
+| `/nation disband [confirm]`                | Disband your nation                              | Nation president                          |
+| `/nation info [nation]`                    | View information about a nation                  | Default                                   |
+| `/nation claim [toggle]`                   | Claim the current chunk or toggle auto-claiming  | Nation officers                           |
+| `/nation unclaim [toggle]`                 | Unclaim the current chunk or toggle auto-unclaim | Nation officers                           |
+| `/nation invite <player>`                  | Invite a player to your nation                   | Nation officers                           |
+| `/nation join <nation>`                    | Join a nation you've been invited to             | Default                                   |
+| `/nation leave`                            | Leave your current nation                        | Default                                   |
+| `/nation appoint <player> <senator         | soldier>`                                        | Appoint a player to a role in your nation | Nation officers |
+| `/nation alliance list`                    | View current alliances and pending requests      | Default                                   |
+| `/nation alliance propose <nation>`        | Propose an alliance to another nation            | Nation officers                           |
+| `/nation alliance accept <nation>`         | Accept an alliance proposal                      | Nation officers                           |
+| `/nation alliance deny <nation>`           | Deny an alliance proposal                        | Nation officers                           |
+| `/nation alliance break <nation>`          | Break an existing alliance                       | Nation officers                           |
+| `/nation vaultnpc [remove]`                | Create, move or remove a Vault NPC               | Nation officers                           |
+| `/nation trade create <nation> [interval]` | Create a trade agreement with another nation     | Nation officers                           |
+| `/nation trade list`                       | View your nation's trade agreements              | Nation officers                           |
+| `/nation trade delete`                     | Delete a trade agreement                         | Nation officers                           |
+| `/nation trade npc create`                 | Create a trade NPC                               | Nation officers                           |
+| `/nation trade npc delete`                 | Delete a trade NPC                               | Nation officers                           |
 
 ### War Commands
 
-| Command                 | Description                   | Permission               |
-| ----------------------- | ----------------------------- | ------------------------ |
-| `/war declare <nation>` | Declare war on another nation | Nation officers          |
-| `/war info [war-id]`    | View information about a war  | Default                  |
-| `/war surrender`        | Surrender in your current war | Nation officers          |
-| `/war list`             | List all active wars          | Default                  |
-| `/war cancel <war-id>`  | Cancel a war (admin only)     | `sovereignty.admin.wars` |
+| Command                                | Description                                | Permission                |
+| -------------------------------------- | ------------------------------------------ | ------------------------- |
+| `/war declare <nation>`                | Declare war on another nation              | Nation president          |
+| `/war list [all]`                      | List your nation's wars or all active wars | Default / Admin for "all" |
+| `/war info <nation> [nation2]`         | View information about wars                | Default                   |
+| `/war cancel <warId/nation> [nation2]` | Cancel an ongoing war                      | `sovereignty.admin.wars`  |
 
-### Vault Commands
+### Vault Command
 
-| Command  | Description              | Permission |
-| -------- | ------------------------ | ---------- |
-| `/vault` | Open your nation's vault | Default    |
+| Command         | Description              | Permission |
+| --------------- | ------------------------ | ---------- |
+| `/vault [page]` | Open your nation's vault | Default    |
 
-### Admin Permissions
+### Admin Commands
 
-| Permission                 | Description                       |
-| -------------------------- | --------------------------------- |
-| `sovereignty.admin.bypass` | Bypass all protection             |
-| `sovereignty.admin.chunks` | Claim chunks beyond normal limits |
-| `sovereignty.admin.wars`   | Cancel ongoing wars               |
+| Command                                  | Description                | Permission                   |
+| ---------------------------------------- | -------------------------- | ---------------------------- |
+| `/nationadmin setpower <nation> <power>` | Set a nation's power level | `sovereignty.admin.setpower` |
 
 ## ⚙️ Configuration
 

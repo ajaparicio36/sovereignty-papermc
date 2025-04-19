@@ -6,6 +6,7 @@ import com.tatayless.sovereignty.commands.vault.VaultCommand;
 import com.tatayless.sovereignty.commands.war.WarCommand;
 import com.tatayless.sovereignty.listeners.PlayerMoveListener;
 import com.tatayless.sovereignty.managers.ToggleManager;
+import com.tatayless.sovereignty.commands.admin.AdminCommandExecutor;
 import org.bukkit.command.PluginCommand;
 
 public class CommandManager {
@@ -24,6 +25,14 @@ public class CommandManager {
             NationCommandExecutor nationExecutor = new NationCommandExecutor(plugin);
             nationCommand.setExecutor(nationExecutor);
             nationCommand.setTabCompleter(nationExecutor);
+        }
+
+        // Register admin command
+        PluginCommand adminCommand = plugin.getCommand("nationadmin");
+        if (adminCommand != null) {
+            AdminCommandExecutor adminExecutor = new AdminCommandExecutor(plugin);
+            adminCommand.setExecutor(adminExecutor);
+            adminCommand.setTabCompleter(adminExecutor);
         }
 
         // Register war command
