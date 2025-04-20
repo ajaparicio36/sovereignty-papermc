@@ -36,6 +36,7 @@ public class AdminService {
         // Log the action for debugging
         plugin.getLogger().info("Admin set nation " + nation.getName() + " power to " + power +
                 " (Power level: " + nation.getPowerLevel() + ")");
+        // Make sure to save the nation to persist changes
         return nationService.saveNation(nation);
     }
 
@@ -56,6 +57,7 @@ public class AdminService {
         // Log the action for debugging
         plugin.getLogger().info("Admin set nation " + nation.getName() + " power to " + power +
                 " (Power level: " + nation.getPowerLevel() + ")");
+        // Make sure to save the nation to persist changes
         return nationService.saveNation(nation);
     }
 }
