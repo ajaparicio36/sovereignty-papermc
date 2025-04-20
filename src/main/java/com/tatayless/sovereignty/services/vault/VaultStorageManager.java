@@ -200,6 +200,7 @@ public class VaultStorageManager {
                             ItemStack[] overflowItems = null;
                             Date overflowExpiry = null;
 
+                            // Load the items from the database
                             if (itemsJson != null && !itemsJson.isEmpty()) {
                                 try {
                                     Map<String, List<Map<String, Object>>> pagesMap = gson.fromJson(itemsJson,
@@ -261,6 +262,8 @@ public class VaultStorageManager {
                             VaultService.NationVault existingVault = new VaultService.NationVault(id, nationId,
                                     vaultPages,
                                     overflowItems, overflowExpiry);
+                            // Mark as clean since we just loaded from DB
+                            existingVault.markClean();
                             nationVaults.put(nationId, existingVault);
                             return existingVault;
                         } catch (Exception e) {
@@ -282,6 +285,8 @@ public class VaultStorageManager {
                         VaultService.NationVault newVault = new VaultService.NationVault(vaultId, nationId,
                                 new HashMap<>(),
                                 null, null);
+                        // Mark as clean since we just created
+                        newVault.markClean();
                         nationVaults.put(nationId, newVault);
                         return newVault;
                     } catch (Exception e) {

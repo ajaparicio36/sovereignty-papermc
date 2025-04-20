@@ -22,6 +22,7 @@ public class VaultService {
     private final NationService nationService;
     private final Map<String, NationVault> nationVaults = new HashMap<>();
     private final Map<UUID, PlayerVaultSession> playerSessions = new ConcurrentHashMap<>();
+    private int savePeriodTicks = 6000; // 5 minute auto-save by default
 
     private final VaultNPCManager npcManager;
     private final VaultStorageManager storageManager;
@@ -44,6 +45,7 @@ public class VaultService {
     public void initialize() {
         plugin.getLogger().info("Initializing VaultService...");
         loadVaults();
+        setupPeriodicSaving();
         plugin.getLogger().info("VaultService initialization complete");
     }
 
@@ -56,6 +58,24 @@ public class VaultService {
         npcManager.loadAndRespawnNPCs();
 
         plugin.getLogger().info("Vault service initialized with " + nationVaults.size() + " vaults");
+    }
+
+    private void setupPeriodicSaving() {
+        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+            plugin.getLogger().info("Running periodic save of all vaults...");
+            int count = 0;
+            for (NationVault vault : nationVaults.values()) {
+                if (vault.isDirty()) {
+                    storageManager.saveVault(vault).thenAccept(success -> {
+                        if (success) {
+                            vault.markClean();
+                        }
+                    });
+                    count++;
+                }
+            }
+            plugin.getLogger().info("Periodic vault save completed: " + count + " vaults saved");
+        }, savePeriodTicks, savePeriodTicks);
     }
 
     public void openVault(Player player, String nationId) {
@@ -138,6 +158,7 @@ public class VaultService {
         Inventory inventory = Bukkit.createInventory(holder, size,
                 net.kyori.adventure.text.Component
                         .text("Nation Vault: " + nation.getName() + " (Page " + (page + 1) + ")"));
+        holder.setInventory(inventory);
 
         ItemStack[] pageItems = vault.getPageItems(page);
         for (int i = 0; i < Math.min(pageItems.length, size); i++) {
@@ -279,9 +300,25 @@ public class VaultService {
         if (changed) {
             plugin.getLogger().info("Updating vault " + vault.getId() + " page " + page + " with new contents");
             vault.setPageItems(page, newItems);
+            vault.markDirty();
 
             storageManager.saveVault(vault).thenAccept(success -> {
                 plugin.getLogger().info("Saved vault " + vault.getId() + " page " + page + " to database: " + success);
+                if (success) {
+                    vault.markClean();
+                    Player updater = null;
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        if (inventory.getViewers().contains(p)) {
+                            updater = p;
+                            break;
+                        }
+                    }
+                    if (updater != null) {
+                        final UUID updaterUuid = updater.getUniqueId();
+                        plugin.getVaultUpdateManager().updateNationVaultViewers(vault.getId(), page, updaterUuid,
+                                inventory);
+                    }
+                }
             });
         } else {
             plugin.getLogger().info("No changes detected in vault " + vault.getId() + " page " + page);
@@ -355,6 +392,37 @@ public class VaultService {
                 });
     }
 
+    /**
+     * Check for inventory changes and save if needed
+     * Called after inventory interactions to ensure state is saved
+     */
+    public void checkAndSaveInventoryChanges(Player player, VaultInventoryHolder holder) {
+        String vaultId = holder.getVaultId();
+        int page = holder.getPage();
+
+        NationVault vault = null;
+        for (NationVault v : nationVaults.values()) {
+            if (v.getId().equals(vaultId)) {
+                vault = v;
+                break;
+            }
+        }
+
+        if (vault == null) {
+            plugin.getLogger().warning("[DEBUG] Could not find vault " + vaultId +
+                    " when checking changes for " + player.getName());
+            return;
+        }
+
+        // Get the inventory to check
+        Inventory inventory = player.getOpenInventory().getTopInventory();
+        if (inventory != null && inventory.getHolder() == holder) {
+            saveInventoryToVault(inventory, vault, page);
+            plugin.getLogger().info("[DEBUG] Checked and saved changes for vault " + vaultId +
+                    " page " + page + " by player " + player.getName());
+        }
+    }
+
     public static class VaultInventoryHolder implements InventoryHolder {
         private final String vaultId;
         private final String nationId;
@@ -405,6 +473,7 @@ public class VaultService {
         private Map<Integer, ItemStack[]> pages;
         private ItemStack[] overflowItems;
         private Date overflowExpiry;
+        private boolean dirty;
 
         public NationVault(String id, String nationId, Map<Integer, ItemStack[]> pages,
                 ItemStack[] overflowItems, Date overflowExpiry) {
@@ -413,6 +482,7 @@ public class VaultService {
             this.pages = pages != null ? new HashMap<>(pages) : new HashMap<>();
             this.overflowItems = overflowItems;
             this.overflowExpiry = overflowExpiry;
+            this.dirty = false;
         }
 
         public String getId() {
@@ -431,7 +501,15 @@ public class VaultService {
         }
 
         public ItemStack[] getPageItems(int page) {
-            return pages.computeIfAbsent(page, k -> new ItemStack[MAX_SINGLE_PAGE_SIZE]);
+            ItemStack[] items = pages.computeIfAbsent(page, k -> new ItemStack[MAX_SINGLE_PAGE_SIZE]);
+
+            ItemStack[] clone = new ItemStack[items.length];
+            for (int i = 0; i < items.length; i++) {
+                if (items[i] != null) {
+                    clone[i] = items[i].clone();
+                }
+            }
+            return clone;
         }
 
         public void setPageItems(int page, ItemStack[] items) {
@@ -445,13 +523,23 @@ public class VaultService {
                     }
                 }
                 pages.put(page, sizedItems);
+                dirty = true;
             } else {
                 pages.put(page, new ItemStack[MAX_SINGLE_PAGE_SIZE]);
+                dirty = true;
             }
         }
 
-        public boolean hasPage(int page) {
-            return pages.containsKey(page) && pages.get(page) != null;
+        public boolean isDirty() {
+            return dirty;
+        }
+
+        public void markDirty() {
+            dirty = true;
+        }
+
+        public void markClean() {
+            dirty = false;
         }
 
         public ItemStack[] getOverflowItems() {

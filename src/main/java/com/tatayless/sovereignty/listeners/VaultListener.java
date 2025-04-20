@@ -10,6 +10,7 @@ import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.logging.Level;
 
@@ -21,6 +22,32 @@ public class VaultListener implements Listener {
         this.plugin = plugin;
         this.vaultService = vaultService;
         plugin.getLogger().info("VaultListener initialized with VaultService reference.");
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onInventoryClickMonitor(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player))
+            return;
+
+        // Check if this is a vault inventory
+        if (!(event.getInventory().getHolder() instanceof VaultService.VaultInventoryHolder))
+            return;
+
+        // This handler runs after the normal click handling
+        // Schedule an update check after the click has been processed
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Player player = (Player) event.getWhoClicked();
+                if (player.isOnline() && player.getOpenInventory() != null) {
+                    VaultService.VaultInventoryHolder holder = (VaultService.VaultInventoryHolder) event.getInventory()
+                            .getHolder();
+
+                    // Tell the vault service to check for changes and update if needed
+                    vaultService.checkAndSaveInventoryChanges(player, holder);
+                }
+            }
+        }.runTaskLater(plugin, 1); // Run in the next tick
     }
 
     @EventHandler(priority = EventPriority.HIGH)

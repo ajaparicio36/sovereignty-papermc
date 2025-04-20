@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.logging.Level;
 
@@ -48,6 +49,32 @@ public class TradeListener implements Listener {
         if (event.getView().title().toString().toLowerCase().contains("trade")) {
             tradeService.handleInventoryClick(event);
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onInventoryClickMonitor(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player))
+            return;
+
+        // Check if this is a trade vault inventory
+        if (!(event.getInventory().getHolder() instanceof TradeVaultHandler.TradeVaultInventoryHolder))
+            return;
+
+        // This handler runs after the normal click handling
+        // Schedule an update check after the click has been processed
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Player player = (Player) event.getWhoClicked();
+                if (player.isOnline() && player.getOpenInventory() != null) {
+                    TradeVaultHandler.TradeVaultInventoryHolder holder = (TradeVaultHandler.TradeVaultInventoryHolder) event
+                            .getInventory().getHolder();
+
+                    // Tell the trade service to check for changes and update if needed
+                    tradeService.checkAndSaveTradeInventoryChanges(player, holder);
+                }
+            }
+        }.runTaskLater(plugin, 1); // Run in the next tick
     }
 
     @EventHandler(priority = EventPriority.HIGH)

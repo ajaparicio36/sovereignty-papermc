@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.InventoryHolder;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -122,20 +123,28 @@ public class VaultUpdateManager {
                     Player viewer = Bukkit.getPlayer(viewerUuid);
                     if (viewer != null && viewer.isOnline() &&
                             viewer.getOpenInventory() != null &&
-                            viewer.getOpenInventory().getTopInventory() != null &&
-                            viewer.getOpenInventory().getTopInventory().getSize() == updatedInventory.getSize()) {
+                            viewer.getOpenInventory().getTopInventory() != null) {
 
-                        // Check if the player is still viewing the expected inventory
-                        String title = viewer.getOpenInventory().title().toString();
-                        if (title.startsWith("Nation Vault:") && title.contains("Page " + (page + 1))) {
-                            // Update inventory contents, preserving navigation buttons
-                            plugin.getLogger().info("[DEBUG] Updating inventory for viewer " + viewer.getName() +
-                                    " for vault " + vaultId + " page " + page);
-                            updateInventoryContentsPreservingButtons(viewer.getOpenInventory().getTopInventory(),
-                                    updatedInventory, VaultService.NEXT_PAGE_SLOT, VaultService.PREV_PAGE_SLOT);
+                        Inventory topInventory = viewer.getOpenInventory().getTopInventory();
+                        InventoryHolder holder = topInventory.getHolder();
+
+                        if (holder instanceof VaultService.VaultInventoryHolder &&
+                                topInventory.getSize() == updatedInventory.getSize()) {
+
+                            VaultService.VaultInventoryHolder vaultHolder = (VaultService.VaultInventoryHolder) holder;
+
+                            // Verify this is the right vault and page
+                            if (vaultHolder.getVaultId().equals(vaultId) && vaultHolder.getPage() == page) {
+                                plugin.getLogger().info("[DEBUG] Updating inventory for viewer " + viewer.getName() +
+                                        " for vault " + vaultId + " page " + page);
+                                updateInventoryContentsPreservingButtons(topInventory, updatedInventory,
+                                        VaultService.NEXT_PAGE_SLOT, VaultService.PREV_PAGE_SLOT);
+                            } else {
+                                plugin.getLogger().info("[DEBUG] Viewer " + viewer.getName() +
+                                        " is looking at wrong vault or page");
+                            }
                         } else {
-                            plugin.getLogger().info("[DEBUG] Viewer " + viewer.getName() +
-                                    " no longer viewing the right page. Current title: " + title);
+                            plugin.getLogger().info("[DEBUG] Viewer inventory no longer matches expected type");
                         }
                     } else {
                         plugin.getLogger().info("[DEBUG] Viewer " + viewerUuid + " no longer valid for updates");

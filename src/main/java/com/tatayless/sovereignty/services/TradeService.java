@@ -51,6 +51,14 @@ public class TradeService {
         this.executionHandler = new TradeExecutionHandler(this, plugin, vaultService, nationService);
     }
 
+    /**
+     * Initialize the trade service
+     */
+    public void initialize() {
+        loadTrades();
+        vaultHandler.setupPeriodicSaving();
+    }
+
     public void loadTrades() {
         CompletableFuture.runAsync(() -> {
             plugin.getDatabaseManager().executeWithLock(new DatabaseOperation<Void>() {
@@ -284,6 +292,27 @@ public class TradeService {
         // Only remove session if player is not navigating within trade menus
         else if (!player.getOpenInventory().title().toString().toLowerCase().contains("trade")) {
             playerSessions.remove(playerUuid);
+        }
+    }
+
+    /**
+     * Check for inventory changes and save if needed
+     * Called after inventory interactions to ensure state is saved
+     */
+    public void checkAndSaveTradeInventoryChanges(Player player, TradeVaultHandler.TradeVaultInventoryHolder holder) {
+        String tradeId = holder.getTradeId();
+        boolean isSender = holder.isSender();
+
+        // Get the inventory to check
+        if (player.getOpenInventory() != null && player.getOpenInventory().getTopInventory() != null &&
+                player.getOpenInventory().getTopInventory().getHolder() == holder) {
+
+            TradeSession session = playerSessions.get(player.getUniqueId());
+            if (session != null) {
+                vaultHandler.updateTradeVault(player, session, player.getOpenInventory().getTopInventory());
+                plugin.getLogger().info("[DEBUG] Checked and saved changes for trade vault " + tradeId +
+                        " (sender: " + isSender + ") by player " + player.getName());
+            }
         }
     }
 

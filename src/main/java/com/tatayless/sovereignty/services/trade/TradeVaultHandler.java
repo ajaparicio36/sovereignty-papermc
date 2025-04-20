@@ -41,6 +41,9 @@ public class TradeVaultHandler {
     // Cache for vault items
     private final Map<String, Map<Boolean, ItemStack[]>> tradeVaultItems = new HashMap<>();
 
+    // Add a cache for dirty state tracking
+    private final Map<String, Map<Boolean, Boolean>> dirtyTradeVaults = new HashMap<>();
+
     // NamespacedKeys for PersistentDataContainer
     private final NamespacedKey buttonTypeKey;
     private final NamespacedKey tradeIdKey;
@@ -118,7 +121,7 @@ public class TradeVaultHandler {
             if (i == CONFIRM_BUTTON_SLOT || i == INFO_BUTTON_SLOT) {
                 continue;
             }
-            contents[i] = inventory.getItem(i);
+            contents[i] = inventory.getItem(i) != null ? inventory.getItem(i).clone() : null;
         }
 
         // Save items to database
@@ -338,14 +341,28 @@ public class TradeVaultHandler {
     }
 
     public void saveTradeVaultItems(String tradeId, boolean isSender, ItemStack[] items) {
+        // Create deep clone of items to prevent concurrent modification
+        ItemStack[] itemsClone = new ItemStack[items.length];
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] != null) {
+                itemsClone[i] = items[i].clone();
+            } else {
+                itemsClone[i] = null;
+            }
+        }
+
         // Update cache
         tradeVaultItems.computeIfAbsent(tradeId, k -> new HashMap<>())
-                .put(isSender, items);
+                .put(isSender, itemsClone);
+
+        // Mark as dirty
+        dirtyTradeVaults.computeIfAbsent(tradeId, k -> new HashMap<>())
+                .put(isSender, true);
 
         // Convert items to JSON
         List<Map<String, Object>> serializedItems = new ArrayList<>();
-        for (ItemStack item : items) {
-            if (item != null) {
+        for (ItemStack item : itemsClone) {
+            if (item != null && !item.getType().isAir()) {
                 try {
                     serializedItems.add(item.serialize());
                 } catch (Exception e) {
@@ -385,19 +402,87 @@ public class TradeVaultHandler {
                             .where(DSL.field("trade_id").eq(tradeId))
                             .execute();
                 }
+
+                // Mark as clean after saving to database
+                if (dirtyTradeVaults.containsKey(tradeId) &&
+                        dirtyTradeVaults.get(tradeId).containsKey(isSender)) {
+                    dirtyTradeVaults.get(tradeId).put(isSender, false);
+                }
+
                 return null;
             }
         });
     }
 
+    /**
+     * Check if a trade vault needs to be saved to the database
+     *
+     * @param tradeId  The ID of the trade
+     * @param isSender Whether this is the sender's side of the trade
+     * @return true if the vault is dirty, false otherwise
+     */
+    public boolean isTradeVaultDirty(String tradeId, boolean isSender) {
+        if (!dirtyTradeVaults.containsKey(tradeId)) {
+            return false;
+        }
+
+        Map<Boolean, Boolean> sideMap = dirtyTradeVaults.get(tradeId);
+        return sideMap.containsKey(isSender) && sideMap.get(isSender);
+    }
+
+    /**
+     * Mark a trade vault as clean (saved to database)
+     *
+     * @param tradeId  The ID of the trade
+     * @param isSender Whether this is the sender's side of the trade
+     */
+    public void markTradeVaultClean(String tradeId, boolean isSender) {
+        dirtyTradeVaults.computeIfAbsent(tradeId, k -> new HashMap<>())
+                .put(isSender, false);
+    }
+
+    /**
+     * Setup periodic saving of trade vaults
+     */
+    public void setupPeriodicSaving() {
+        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+            plugin.getLogger().info("Running periodic save of trade vaults...");
+            int count = 0;
+
+            // Make a copy of the keys to avoid concurrent modification
+            List<String> tradeIds = new ArrayList<>(dirtyTradeVaults.keySet());
+
+            for (String tradeId : tradeIds) {
+                Map<Boolean, Boolean> sideMap = dirtyTradeVaults.get(tradeId);
+                for (Map.Entry<Boolean, Boolean> entry : new HashMap<>(sideMap).entrySet()) {
+                    Boolean isSender = entry.getKey();
+                    Boolean isDirty = entry.getValue();
+
+                    if (isDirty) {
+                        // Get items from cache
+                        ItemStack[] items = tradeVaultItems.get(tradeId).get(isSender);
+                        if (items != null) {
+                            saveTradeVaultItems(tradeId, isSender, items);
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            plugin.getLogger().info("Periodic trade vault save completed: " + count + " vaults saved");
+        }, 6000, 6000); // Every 5 minutes (6000 ticks)
+    }
+
     // Clear cache for a specific trade
     public void clearCache(String tradeId) {
         tradeVaultItems.remove(tradeId);
+        dirtyTradeVaults.remove(tradeId);
     }
 
     // Clear all cache
     public void clearAllCache() {
         tradeVaultItems.clear();
+        dirtyTradeVaults.clear();
     }
 
     // When a player closes the trade vault inventory
